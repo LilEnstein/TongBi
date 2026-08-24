@@ -1,0 +1,24 @@
+{
+  "name": "@tongbi/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx test/integration.ts",
+    "test:load": "tsx test/load30.ts",
+    "bots": "tsx test/bots.ts"
+  },
+  "dependencies": {
+    "@tongbi/game-rules": "*",
+    "socket.io": "^4.8.1",
+    "tsx": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "socket.io-client": "^4.8.3",
+    "typescript": "^5.7.3"
+  }
+}

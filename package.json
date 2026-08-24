@@ -1,0 +1,28 @@
+{
+  "name": "tong-bi",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Tổng Bi — realtime multiplayer party game (đoán tổng bi)",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c cyan,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm run dev -w @tongbi/server",
+    "dev:web": "npm run dev -w @tongbi/web",
+    "build": "npm run build -w @tongbi/web",
+    "start": "npm run start -w @tongbi/server",
+    "test": "npm run test -w @tongbi/game-rules",
+    "test:integration": "npm run test -w @tongbi/server",
+    "test:load": "npm run test:load -w @tongbi/server",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

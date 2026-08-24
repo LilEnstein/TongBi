@@ -1,0 +1,25 @@
+# Render Blueprint — deployment guide "Deploy game server trên Render".
+# Dùng: Render Dashboard → New → Blueprint → trỏ vào repo này.
+services:
+  - type: web
+    name: tong-bi-server
+    runtime: node
+    plan: free # free instance sẽ spin down khi không có ai chơi; lên starter nếu cần chạy thật
+    region: singapore
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22.13.0
+      - key: NODE_ENV
+        value: production
+      - key: MAX_PLAYERS_PER_ROOM
+        value: "30"
+      - key: ROOM_TTL_MINUTES
+        value: "120"
+      # Đặt sau khi có domain Vercel, ví dụ https://tongbi.vercel.app
+      # Để trống = cho phép mọi origin (chỉ nên dùng khi đang thử nghiệm).
+      - key: CLIENT_ORIGIN
+        sync: false
