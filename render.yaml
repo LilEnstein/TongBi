@@ -6,7 +6,9 @@ services:
     runtime: node
     plan: free # free instance sẽ spin down khi không có ai chơi; lên starter nếu cần chạy thật
     region: singapore
-    buildCommand: npm ci && npm run build
+    # --include=dev là bắt buộc: NODE_ENV=production khiến npm ci bỏ qua
+    # devDependencies, mà vite/typescript nằm ở đó nên build sẽ hỏng.
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /health
     autoDeploy: true
