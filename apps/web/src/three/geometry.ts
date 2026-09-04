@@ -7,8 +7,15 @@
 export const VONG_RADIUS = 2.15;
 export const SEAT_RADIUS = 3.05;
 
-/** Khoảng cách tối thiểu giữa hai chỗ ngồi để tay và đống bi không chồng nhau. */
-const MIN_SEAT_ARC = 0.78;
+/**
+ * Khoảng cách tối thiểu giữa hai chỗ ngồi.
+ *
+ * Nới từ 0.78 lên 1.16 từ khi mỗi chỗ ngồi có cả một con vật chứ không chỉ một
+ * bàn tay: thân con vật rộng khoảng 0.6 đơn vị, cộng hai cái tai và đống bi bên
+ * cạnh thì 0.78 là chồng vai nhau. Camera tự lùi thêm theo bán kính nên sân 30
+ * đứa vẫn vào đủ khung.
+ */
+const MIN_SEAT_ARC = 1.16;
 
 /**
  * Bán kính vòng người ngồi. Sân ít người dùng bán kính mặc định; sân đông

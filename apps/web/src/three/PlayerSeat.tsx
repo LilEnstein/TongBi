@@ -13,7 +13,9 @@ import {
   type Player,
   type PlayerRoundPublic,
 } from "@tongbi/game-rules";
-import { Hand, type CuChi } from "./Hand.js";
+import { Non } from "../ui/common.js";
+import { ConVat, loaiConVat, type ChiTiet, type TuThe } from "./ConVat.js";
+import { Hand, type CuChi, type HandDrive } from "./Hand.js";
 import { Marble, marbleColor } from "./Marble.js";
 import {
   easeOutCubic,
@@ -24,7 +26,7 @@ import {
   seatPosition,
   smoothstep,
 } from "./geometry.js";
-import { DA_MO, tongDa } from "./toon.js";
+import { boLong } from "./toon.js";
 import { sfx } from "../audio/sfx.js";
 
 /** Đống bi nằm ngay trên nền đất, cạnh đầu gối. */
@@ -36,8 +38,15 @@ const FLY_STAGGER = 0.075;
 /** Bi bay xong rồi tay mới khép lại. */
 const CLOSE_DELAY = 0.95;
 const MAX_PILE_MESHES = 24;
-/** Bàn tay và bi được phóng to so với vòng tròn để đọc rõ trên điện thoại. */
-const TY_LE_TAY = 1.35;
+/**
+ * Tỉ lệ bàn tay so với hình học của vòng tròn.
+ *
+ * Hồi chỗ ngồi chỉ có một bàn tay thì để 1.35 cho đọc rõ trên điện thoại (§9.1).
+ * Giờ silhouette đọc được từ xa là con vật, còn bàn tay chỉ là chi tiết, nên
+ * phải thu về 0.75 — để 1.1 thì bàn tay to bằng cả cái thân, trông như con vật
+ * đang đeo bao tay thợ.
+ */
+const TY_LE_TAY = 0.75;
 
 interface SeatProps {
   player: Player;
@@ -60,6 +69,12 @@ interface SeatProps {
   /** Camera đang ở khung cận (sát tay / sát xúc xắc) — nhãn của chính mình
       sẽ bị phóng to che hết sân nên phải giấu đi. */
   khungGan?: boolean;
+  /** Mức chi tiết của con vật, hạ xuống khi sân đông (§15). */
+  chiTiet?: ChiTiet;
+  /** Người chơi vừa chạm vào con vật này lúc nào — để nó ngẩng lên đáp lại. */
+  chamLuc?: number | null;
+  /** Chạm vào con vật. Không truyền thì con vật không nhận sự kiện chuột. */
+  onCham?: (playerId: string) => void;
 }
 
 /** Bi bay từ đống bi vào lòng bàn tay rồi nằm lại thành cụm. */
@@ -115,7 +130,7 @@ function BiTrongTay({
             refs.current[i] = el;
           }}
         >
-          <Marble position={[0, 0, 0]} color={marbleColor(seed + i)} />
+          <Marble position={[0, 0, 0]} color={marbleColor(seed + i)} ten="bi-trong-tay" />
         </group>
       ))}
     </>
@@ -137,6 +152,9 @@ export function PlayerSeat({
   isRolling,
   vienMuc = false,
   khungGan = false,
+  chiTiet = "cao",
+  chamLuc = null,
+  onCham,
 }: SeatProps) {
   const submitted = round?.submitted ?? false;
   const submittedAt = useRef<number | null>(null);
@@ -170,17 +188,20 @@ export function PlayerSeat({
   let reach = 0;
   let lift = 0;
   let cuChi: CuChi = "yen";
+  let tuThe: TuThe = "ngoi";
 
   switch (phase) {
     case GamePhase.SELECT_MARBLES:
       if (submitted) {
         reach = 1;
         curl = sinceSubmit > CLOSE_DELAY ? 1 : 0;
+        tuThe = "ngoi";
       } else {
         reach = 0.2;
         curl = 0.1;
         // Quệt tay vào quần trước khi bốc bi — clip wipe_dirt (§9.1).
         cuChi = "quet-quan";
+        tuThe = "chom";
       }
       break;
     case GamePhase.CLOSE_HAND:
@@ -189,24 +210,30 @@ export function PlayerSeat({
       curl = 1;
       // Mình thì hé tay nhìn trộm bi của chính mình; vài đứa khác thì lắc tay trêu.
       cuChi = isLocal ? "nhin-trom" : seed % 4 === 0 ? "lac-tay" : "yen";
+      tuThe = "chom";
       break;
     case GamePhase.REVEAL:
       reach = 1;
       curl = opened ? 0 : 1;
+      // Cả sân nghển cổ nhìn vào giữa vòng.
+      tuThe = "ngong";
       break;
     case GamePhase.ROUND_RESULT:
       reach = 0.75;
       curl = 0;
       lift = isWinner ? 1 : 0;
+      tuThe = isWinner ? "reo" : "xiu";
       break;
     case GamePhase.DICE_ROLL:
       reach = isRolling ? 0.5 : 0;
       curl = isRolling ? 0.6 : 0.14;
+      tuThe = isRolling ? "tung" : "ngong";
       break;
     case GamePhase.GAME_OVER:
       reach = 0;
       curl = 0.14;
       lift = isWinner ? 1 : 0;
+      tuThe = isWinner ? "reo" : "xiu";
       break;
     default:
       break;
@@ -217,6 +244,7 @@ export function PlayerSeat({
     reach = 0;
     lift = 0;
     cuChi = "yen";
+    tuThe = "xiu";
   }
 
   // Bi hiển thị trong lòng bàn tay: chỉ khi thực sự được phép biết con số.
@@ -231,7 +259,19 @@ export function PlayerSeat({
   const pos = seatPosition(angle, radius);
   const mo = player.eliminated || !player.connected;
   const doi = doiTuMau(teamColor);
-  const nhanQuaGan = isLocal && khungGan;
+  const long = boLong(loaiConVat(player.avatar), mo);
+  /**
+   * Trạng thái tay đã làm mượt. Bàn tay ghi vào nó, con vật đọc ra để nối cánh
+   * tay vào cổ tay — nhờ vậy vai và tay không bao giờ rời nhau dù ai chậm frame.
+   */
+  const drive = useMemo<HandDrive>(() => ({ curl, reach, lift }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  /**
+   * Khung cận đứng trong lòng vòng nên chỗ ngồi nào cũng có thể chỉ cách camera
+   * một đơn vị; `distanceFactor` của Html khi đó phóng nhãn lên gấp mấy lần,
+   * một cái tên che kín nửa màn hình. Ở khung cận thì giấu hết nhãn đi — lúc ấy
+   * người chơi đang nhìn nắm tay của mình, không cần đọc tên ai.
+   */
+  const nhanQuaGan = khungGan;
   // Số bi chỉ được đóng dấu xuống đất trong lúc mở tay và lúc đếm bi.
   const hienDauMuc =
     opened &&
@@ -241,31 +281,66 @@ export function PlayerSeat({
 
   return (
     <group position={pos} rotation={[0, facingCenter(angle), 0]}>
-      {/* Tay và bi phóng to hơn tỉ lệ hình học của vòng tròn: bàn tay là nhân
-          vật chính của khung hình, phải đọc được cả khi ngồi bên kia sân (§9.1). */}
-      <group scale={TY_LE_TAY}>
-        <Hand
-          curl={curl}
-          reach={reach}
-          lift={lift}
-          skin={mo ? DA_MO : tongDa(seed)}
-          chiCoTay={teamColor}
+      {/* Con vật ngồi bệt, bàn tay là cánh tay phải của nó vươn vào giữa vòng.
+          Chạm vào thì nó ngẩng lên đáp lại — `e.delta` để phân biệt cái chạm
+          với động tác kéo xoay camera. */}
+      <group
+        onClick={
+          onCham &&
+          ((e) => {
+            if (e.delta > 6) return;
+            e.stopPropagation();
+            onCham(player.id);
+          })
+        }
+      >
+        <ConVat
+          loai={player.avatar}
+          drive={drive}
+          tuThe={tuThe}
+          seed={seed}
+          doi={teamColor}
+          mo={mo}
+          chiTiet={chiTiet}
           vien={vienMuc}
-          cuChi={cuChi}
+          chamLuc={chamLuc}
+          tyLeTay={TY_LE_TAY}
         >
-          {palmCount > 0 && (
-            <BiTrongTay count={palmCount} seed={seed} startAt={flyStart} />
-          )}
-        </Hand>
+          {/* Tay và bi phóng to hơn tỉ lệ hình học của vòng tròn: bàn tay là
+              nhân vật chính của khung hình, phải đọc được cả khi ngồi bên kia
+              sân (§9.1). */}
+          <group scale={TY_LE_TAY}>
+            <Hand
+              curl={curl}
+              reach={reach}
+              lift={lift}
+              drive={drive}
+              skin={long.chinh}
+              ongTay={long.chinh}
+              chiCoTay={teamColor}
+              vien={vienMuc}
+              cuChi={cuChi}
+            >
+              {palmCount > 0 && (
+                <BiTrongTay count={palmCount} seed={seed} startAt={flyStart} />
+              )}
+            </Hand>
+          </group>
+        </ConVat>
+      </group>
 
-        {/* Đống bi còn lại nằm trên đất trước mặt */}
+      {/* Đống bi còn lại nằm trên đất trước mặt — không nhún theo con vật. */}
+      <group scale={TY_LE_TAY}>
         <group position={PILE_OFFSET}>
           {pile.map((p, i) => (
             <Marble
               key={i}
               position={p}
               color={marbleColor(seed + i)}
-              scale={mo ? 0.8 : 1}
+              // Bi giữ nguyên cỡ thật dù bàn tay đã thu nhỏ: bi ve 16mm mà
+              // vẽ bé hơn nữa thì đống bi thành một vệt mờ trên đất.
+              scale={(mo ? 0.8 : 1) / TY_LE_TAY}
+              ten="bi-tren-dat"
             />
           ))}
         </group>
@@ -292,7 +367,7 @@ export function PlayerSeat({
               title={doi}
             />
             <span>
-              {player.avatar} {player.name}
+              <Non avatar={player.avatar} nho /> {player.name}
               {isLocal ? " (bạn)" : ""}
             </span>
             <span className="may-bi so">{player.marbleCount}</span>

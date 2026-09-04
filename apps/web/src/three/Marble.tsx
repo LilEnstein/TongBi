@@ -26,14 +26,20 @@ interface MarbleProps {
   position: [number, number, number];
   color: string;
   scale?: number;
+  /**
+   * Tên trong scene graph. Test dùng nó để đếm riêng bi trong lòng bàn tay và
+   * bi trong đống trên đất — đó là cách kiểm tra luật thông tin ẩn (§18) mà
+   * không phải đếm mò tổng số hình cầu của cả cảnh.
+   */
+  ten?: string;
 }
 
-export function Marble({ position, color, scale = 1 }: MarbleProps) {
+export function Marble({ position, color, scale = 1, ten }: MarbleProps) {
   // Dải xoáy nằm nghiêng một góc khác nhau ở mỗi viên, như bi thật.
   const nghieng = useMemo(() => (position[0] + position[2]) * 9, [position]);
 
   return (
-    <group position={position} scale={scale}>
+    <group position={position} scale={scale} name={ten}>
       {/* Vỏ thuỷ tinh: trong đục, hơi ngả vàng như bi để lâu trong túi vải. */}
       <mesh castShadow>
         <sphereGeometry args={[MARBLE_RADIUS, 12, 9]} />

@@ -2,7 +2,7 @@
  * Tan sân — hoàng hôn, khói bếp (§2). Xếp hạng đếm bằng túi bi, không phải bảng số.
  */
 import type { PublicRoomState } from '@tongbi/game-rules';
-import { GiayDo, Met, Nut, TuiBi } from './common.js';
+import { GiayDo, Met, Non, Nut, TuiBi } from './common.js';
 
 export function GameOver({
   room,
@@ -27,7 +27,9 @@ export function GameOver({
       {nguoiNhat && (
         <Met className="tong-that hien">
           <span className="nhan-nho">ôm bi về nhất</span>
-          <div style={{ fontSize: 33 }}>{nguoiNhat.avatar}</div>
+          <div className="canh-giua" style={{ display: 'flex', justifyContent: 'center' }}>
+            <Non avatar={nguoiNhat.avatar} />
+          </div>
           <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 800, fontSize: 21 }}>
             {nguoiNhat.name}
           </div>
@@ -45,7 +47,7 @@ export function GameOver({
               <li key={s.playerId} className={s.playerId === myId ? 'la-minh' : ''}>
                 <span className="hang-so so">#{s.rank}</span>
                 <span className="ai">
-                  {p.avatar} {p.name}
+                  <Non avatar={p.avatar} nho /> {p.name}
                 </span>
                 <span style={{ transform: 'scale(.55)', transformOrigin: 'right center' }}>
                   <TuiBi so={s.marbles} tong={nhieuNhat} />

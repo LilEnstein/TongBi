@@ -10,6 +10,7 @@
  * Ctrl+C để ngắt; bot cũng tự thoát sau 10 phút.
  */
 import { io, type Socket } from 'socket.io-client';
+import { AVATARS as DANH_SACH_AVATAR } from '@tongbi/game-rules';
 
 const URL = process.env.BOT_URL ?? 'http://127.0.0.1:10000';
 const ROOM = process.argv[2];
@@ -20,7 +21,10 @@ if (!ROOM) {
   process.exit(1);
 }
 
-const AVATARS = ['🐼', '🦊', '🐸', '🐵', '🐧', '🦁', '🐨', '🐰', '🐮'];
+// Lấy thẳng từ game-rules: danh sách con vật đã đổi từ emoji sang id tranh dân
+// gian, bot dùng emoji cũ thì cả sân đều ra con mặc định, không thấy được mười
+// con vật khác nhau khi kiểm tra bằng mắt.
+const AVATARS = [...DANH_SACH_AVATAR];
 const NAMES = [
   'Bình', 'Cường', 'Dũng', 'Em', 'Phúc', 'Giang', 'Hà', 'Khoa', 'Linh', 'Minh',
   'Nam', 'Oanh', 'Phương', 'Quân', 'Sơn', 'Trang', 'Uyên', 'Vy', 'Yến', 'An',

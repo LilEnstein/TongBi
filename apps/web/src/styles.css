@@ -703,7 +703,10 @@ input {
   flex: 0 0 auto;
   background: repeating-radial-gradient(circle at 50% 50%, #e9d49b 0 3px, #d9be7c 3px 7px);
   border: 4px solid var(--tre-toi);
-  display: grid;
+  /* inline-grid chứ không phải grid: nón đứng cạnh tên người chơi trong nhãn
+     ghế 3D và bảng xếp hạng, hộp block sẽ đẩy tên xuống dòng dưới. */
+  display: inline-grid;
+  vertical-align: middle;
   place-content: center;
   font-size: 24px;
   padding: 10px 0 0;
@@ -723,10 +726,11 @@ input {
   font-size: 18px;
   border-width: 3px;
 }
-/* Chóp nón là điểm neo màu đội; mặt đứa bé nằm dưới vành nón. */
+/* Chóp nón là điểm neo màu đội; mặt con vật nằm dưới vành nón.
+   Sát mép trên để không đè lên trán con vật (xem `.non .mat`). */
 .non .chop {
   position: absolute;
-  top: 15%;
+  top: 1%;
   left: 50%;
   width: 12px;
   height: 12px;
@@ -756,6 +760,42 @@ input {
 .non.mo {
   opacity: 0.5;
   filter: grayscale(0.5);
+}
+
+/* Mặt con vật (tranh dân gian) nằm dưới vành nón, chừa chỗ cho chóp ở trên.
+   Phải định vị tuyệt đối: `.non` là grid `place-content: center` nên track co
+   theo nội dung, để ảnh trong luồng thì % quy chiếu vào chính cỡ ảnh.
+   Và phải ghi rõ width/height — `width: auto` trên thẻ thay thế như <img> lấy
+   kích thước nội tại chứ không suy ra từ inset, ảnh sẽ tràn ra 256px. */
+.non .mat {
+  position: absolute;
+  top: 24%;
+  left: 6%;
+  width: 88%;
+  height: 72%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* Ảnh chưa sinh hoặc tải hỏng: lùi về chữ, thu nhỏ cho lọt vành nón. */
+.non .mat-chu {
+  font-size: 0.62em;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+/* Nhãn ghế trong cảnh 3D chật, thu vành nón lại cho vừa một dòng chữ. */
+.nhan-ghe .non {
+  width: 24px;
+  height: 24px;
+  border-width: 2px;
+  vertical-align: -6px;
+}
+.nhan-ghe .non .chop {
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-width: 1.5px;
 }
 
 /* Chọn avatar ở sảnh. */
@@ -2031,4 +2071,106 @@ hr.tach {
 .man-p03 {
   background-size: cover;
   background-position: center top;
+}
+
+/* ─────────────────── Ống sáo: công tắc tiếng — §12 ──────────────────────── */
+
+.nut-tieng {
+  position: fixed;
+  left: 10px;
+  bottom: calc(10px + var(--safe-b));
+  z-index: 61;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--muc);
+  background: var(--tre);
+  border: 3px solid var(--muc);
+  border-radius: 50%;
+  box-shadow: 0 3px 0 var(--tre-toi);
+  cursor: pointer;
+  opacity: 0.6;
+  transition:
+    opacity 0.18s var(--truot),
+    transform 0.12s var(--nay);
+}
+.nut-tieng:hover,
+.nut-tieng:focus-visible {
+  opacity: 1;
+}
+.nut-tieng:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--tre-toi);
+}
+.nut-tieng svg {
+  width: 22px;
+  height: 22px;
+}
+/* Đang có tiếng: có hơi thoát ra, không có nét gạch. */
+.nut-tieng .gach {
+  opacity: 0;
+}
+/* Tắt tiếng: ống sáo hoá đất bạc màu, hơi tắt, gạch một nét mực lên. */
+.nut-tieng.tat {
+  background: var(--bac);
+  box-shadow: 0 3px 0 var(--dat-toi);
+}
+.nut-tieng.tat .hoi {
+  opacity: 0;
+}
+.nut-tieng.tat .gach {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nut-tieng {
+    transition: none;
+  }
+}
+
+/* ──────────── Về chỗ cũ: hiện sau khi người chơi tự xoay sân ────────────── */
+
+/**
+ * Một mẩu mo cau ghim trên nền đất, nằm ngay trên công tắc tiếng. Chỉ hiện khi
+ * người chơi đã kéo camera đi khỏi khung hình của phase.
+ */
+.ve-khung {
+  position: fixed;
+  left: 10px;
+  bottom: calc(60px + var(--safe-b));
+  z-index: 61;
+  padding: 7px 13px;
+  font-family: 'Baloo 2', cursive;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--muc);
+  background: var(--giay);
+  border: 3px solid var(--muc);
+  border-radius: 14px 5px 14px 5px;
+  box-shadow: 0 3px 0 var(--dat-toi);
+  cursor: pointer;
+  animation: mo-cau-hien 0.26s var(--nay);
+}
+.ve-khung:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--dat-toi);
+}
+
+@keyframes mo-cau-hien {
+  from {
+    opacity: 0;
+    transform: translateY(6px) rotate(-3deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ve-khung {
+    animation: none;
+  }
 }

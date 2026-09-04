@@ -25,6 +25,7 @@ import {
   sanitizeSettings,
   TEAM_COLORS,
   TEAM_NAMES,
+  AVATAR_MAC_DINH,
   validateGuess,
   validateMarbleChoice,
   type ClientEvents,
@@ -160,7 +161,7 @@ export class Room {
     const player: PlayerRecord = {
       id: playerId,
       name: sanitizeName(name),
-      avatar: avatar || '🐯',
+      avatar: avatar || AVATAR_MAC_DINH,
       teamId: '',
       marbleCount: this.settings.startingMarbles,
       connected: true,

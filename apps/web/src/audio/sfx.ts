@@ -273,6 +273,11 @@ export const sfx = {
     [0, 0.22, 0.44].forEach((d) => trongEch(0.24, 1, d));
     [783.99, 880, 1046.5, 1174.7].forEach((f, i) => saoTruc(f, 0.5, 0.15, 0.66 + i * 0.34));
   },
+  /** Chạm vào một con vật: hai nốt sáo hỏi "ơ?" rất ngắn. */
+  goiConVat(): void {
+    saoTruc(880, 0.16, 0.1);
+    saoTruc(1174.7, 0.2, 0.09, 0.13);
+  },
   /** Bị loại: một tiếng chuông chùa xa, rất nhẹ. */
   biLoai(): void {
     chuongChua(0.09);
@@ -318,6 +323,13 @@ interface NenNode {
 
 let nen: NenNode | null = null;
 let hen: ReturnType<typeof setTimeout> | null = null;
+/**
+ * Khi có nhạc nền (liên khúc sáo trúc), lớp ve sầu/gió phải lùi xuống nếu không
+ * hai lớp cùng dải trung sẽ đục vào nhau.
+ */
+let heSoNhuong = 1;
+/** Độ căng đang áp dụng, giữ lại để áp lại khi hệ số nhường thay đổi. */
+let dichHienTai = 0.3;
 
 function buffer2s(c: AudioContext): AudioBuffer {
   const frames = c.sampleRate * 2;
@@ -427,8 +439,15 @@ export const nenSan = {
     const c = audio();
     if (!c || !nen) return;
     const dich = Math.max(0, Math.min(1, muc));
-    nen.ve.gain.setTargetAtTime(0.012 + dich * 0.055, c.currentTime, 1.2);
-    nen.gio.gain.setTargetAtTime(0.026 - dich * 0.014, c.currentTime, 1.2);
+    nen.ve.gain.setTargetAtTime((0.012 + dich * 0.055) * heSoNhuong, c.currentTime, 1.2);
+    nen.gio.gain.setTargetAtTime((0.026 - dich * 0.014) * heSoNhuong, c.currentTime, 1.2);
+    dichHienTai = dich;
+  },
+
+  /** Nhường dải trung cho nhạc nền. */
+  nhuongNhac(bat: boolean): void {
+    heSoNhuong = bat ? 0.42 : 1;
+    this.cang(dichHienTai);
   },
 
   dung(): void {

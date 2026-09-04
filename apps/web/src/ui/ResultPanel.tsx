@@ -3,7 +3,7 @@
  * Art direction §7, §10 (bụi đất, không confetti), §14.
  */
 import type { Player, RoundResult, Team } from '@tongbi/game-rules';
-import { doiTheoMau, GiayDo, Khan, Met, VachDat } from './common.js';
+import { doiTheoMau, GiayDo, Khan, Met, Non, VachDat } from './common.js';
 
 interface Props {
   result: RoundResult;
@@ -63,7 +63,7 @@ export function ResultPanel({ result, teams, players, myTeamId }: Props) {
             return (
               <div key={r.playerId} className="dong-bi">
                 <span>
-                  {p.avatar} {p.name}
+                  <Non avatar={p.avatar} nho /> {p.name}
                 </span>
                 <span className="giau">giấu {r.marbles}</span>
                 <span className={`chenh so ${chenh >= 0 ? 'len' : 'xuong'}`}>

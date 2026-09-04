@@ -7,7 +7,13 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AVATARS, GamePhase, type Penalty, type SessionCredentials } from '@tongbi/game-rules';
+import {
+  AVATAR_TEN,
+  AVATARS,
+  GamePhase,
+  type Penalty,
+  type SessionCredentials,
+} from '@tongbi/game-rules';
 import { emitAck, getSocket, ServerError } from '../net/socket.js';
 import { useGame } from '../net/store.js';
 import { loadProfile, saveProfile } from '../lib/session.js';
@@ -56,6 +62,9 @@ export function RoomScreen() {
 
   const [state, setState] = useState<JoinState>('idle');
   const [daBaoLoai, setDaBaoLoai] = useState(false);
+  // Người chơi đã tự xoay sân đi hay chưa, và mốc bấm nút kéo camera về khung.
+  const [daXoaySan, setDaXoaySan] = useState(false);
+  const [veKhungLuc, setVeKhungLuc] = useState(0);
   const [loi, setLoi] = useState('');
   const [maLoi, setMaLoi] = useState<string | undefined>(undefined);
   const profile = loadProfile();
@@ -190,7 +199,7 @@ export function RoomScreen() {
                   <button
                     key={a}
                     onClick={() => setAvatar(a)}
-                    aria-label={`Chọn mặt ${a}`}
+                    aria-label={`Chọn mặt ${AVATAR_TEN[a] ?? a}`}
                     aria-pressed={a === avatar}
                   >
                     <Non avatar={a} chon={a === avatar} />
@@ -289,8 +298,18 @@ export function RoomScreen() {
           revealCue={revealCue}
           diceOutcome={diceCue?.outcome ?? room.lastDice}
           diceStartedAt={diceCue?.at ?? null}
+          veKhungLuc={veKhungLuc}
+          onTuXoay={setDaXoaySan}
         />
       </div>
+
+      {/* Kéo để xoay sân, chụm hai ngón để phóng. Xoay rồi thì có đường về —
+          camera cũng tự về khung của phase mỗi lần sang phase mới (§6). */}
+      {daXoaySan && (
+        <button className="ve-khung" onClick={() => setVeKhungLuc(Date.now())}>
+          về chỗ cũ
+        </button>
+      )}
 
       {/* Nhịp ánh sáng của phase — một lớp tint duy nhất phủ lên cảnh. */}
       <div className="nang" aria-hidden />

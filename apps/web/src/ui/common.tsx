@@ -5,9 +5,10 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import QRCode from 'qrcode';
-import { TEAM_COLORS, TEAM_MARKS } from '@tongbi/game-rules';
+import { AVATAR_TEN, TEAM_COLORS, TEAM_MARKS } from '@tongbi/game-rules';
 import { useGame } from '../net/store.js';
-import { sfx, unlockAudio } from '../audio/sfx.js';
+import { nenSan, sfx, unlockAudio } from '../audio/sfx.js';
+import { datTieng, tiengDangBat } from '../audio/nhacNen.js';
 
 /* ─────────────────────────── Đội: màu và vật nhận dạng ─────────────────── */
 
@@ -197,6 +198,37 @@ export function TrongEch({
 
 /* ─────────────────────────── Nón lá, khăn đội ──────────────────────────── */
 
+/**
+ * Id avatar mới toàn chữ thường (`trau`, `ga`…). Hồ sơ lưu từ bản trước còn giữ
+ * emoji trong localStorage, và server cũ có thể trả về emoji — hai dạng đó không
+ * khớp mẫu này nên rơi xuống nhánh in chữ, không vỡ giao diện.
+ */
+const LA_ID_MAT = /^[a-z]+$/;
+
+/** Mặt con vật trong vành nón: ảnh nếu là id mới, không thì in nguyên emoji cũ. */
+function MatConVat({ avatar }: { avatar: string }) {
+  const [hong, setHong] = useState(false);
+
+  if (!LA_ID_MAT.test(avatar)) return <>{avatar}</>;
+  // Ảnh chưa sinh hoặc tải hỏng thì lùi về chữ, tránh ô vuông vỡ ảnh.
+  // 3 ký tự để `chuột` và `chim` không rút thành cùng một chữ.
+  if (hong) return <b className="mat-chu">{(AVATAR_TEN[avatar] ?? avatar).slice(0, 3)}</b>;
+
+  return (
+    <img
+      className="mat"
+      src={`/mat/mat_${avatar}.webp`}
+      alt=""
+      width={40}
+      height={40}
+      /* Không lazy: cả 10 mặt hiện cùng lúc ở màn chọn và tổng chỉ ~120KB,
+         hoãn tải chỉ tạo ra khung rỗng nháy lên rồi mới có ảnh. */
+      decoding="async"
+      onError={() => setHong(true)}
+    />
+  );
+}
+
 export function Non({
   avatar,
   doi,
@@ -218,7 +250,7 @@ export function Non({
       }`}
       aria-hidden
     >
-      {avatar}
+      <MatConVat avatar={avatar} />
       <span className="chop" />
     </span>
   );
@@ -320,6 +352,50 @@ export function LaCuonHop() {
         </button>
       ))}
     </div>
+  );
+}
+
+/* ─────────────────── Ống sáo: công tắc tiếng ────────────────── */
+
+/**
+ * Một ống sáo tre treo ở góc sân — bấm vào là tắt/mở toàn bộ tiếng:
+ * liên khúc sáo trúc, ve sầu, trống ếch. Lựa chọn được ghi nhớ cho lần sau.
+ */
+export function NutTieng() {
+  const [bat, setBat] = useState(tiengDangBat);
+
+  return (
+    <button
+      className={`nut-tieng${bat ? '' : ' tat'}`}
+      aria-label={bat ? 'Tắt tiếng' : 'Mở tiếng'}
+      aria-pressed={bat}
+      onClick={() => {
+        const moi = !bat;
+        unlockAudio();
+        nenSan.batDau();
+        nenSan.nhuongNhac(moi);
+        datTieng(moi);
+        setBat(moi);
+        if (moi) sfx.que();
+      }}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.2}
+        strokeLinecap="round"
+      >
+        {/* ống sáo tre nằm ngang */}
+        <path d="M3 12h11" />
+        {/* hai làn hơi thoát ra — tắt tiếng thì không còn hơi */}
+        <path className="hoi" d="M16.6 8.8a5.2 5.2 0 0 1 0 6.4" />
+        <path className="hoi" d="M19.6 6.4a8.4 8.4 0 0 1 0 11.2" />
+        {/* nét gạch chéo bằng mực khi tắt */}
+        <path className="gach" d="M4.5 19.5 19.5 4.5" />
+      </svg>
+    </button>
   );
 }
 

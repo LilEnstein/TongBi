@@ -56,7 +56,23 @@ export const TEAM_NAMES = ['Đội Chàm', 'Đội Điều', 'Đội Lá', 'Đ�
  */
 export const TEAM_MARKS = ['khăn mỏ quạ', 'dây chun đỏ', 'tàu lá chuối', 'nón lá'] as const;
 
-export const AVATARS = ['🐯', '🐼', '🦊', '🐸', '🐵', '🐧', '🦁', '🐨', '🐰', '🐮'] as const;
+/**
+ * Mười con vật trong tranh dân gian, thay bộ emoji cũ. Giá trị là id — ảnh nằm
+ * ở `apps/web/public/mat/mat_<id>.webp`, sinh theo docs/tong_bi_asset_list.md §1.
+ * Hồ sơ cũ còn lưu emoji trong localStorage vẫn hiển thị được (xem `Non`).
+ */
+export const AVATARS = [
+  'trau', 'ga', 'lon', 'meo', 'chuot',
+  'coc', 'ca', 'vit', 'chim', 'ho',
+] as const;
+
+export const AVATAR_MAC_DINH = 'trau';
+
+/** Tên đọc được cho screen reader; thứ tự khớp AVATARS. */
+export const AVATAR_TEN: Record<string, string> = {
+  trau: 'trâu', ga: 'gà trống', lon: 'lợn', meo: 'mèo', chuot: 'chuột',
+  coc: 'cóc', ca: 'cá chép', vit: 'vịt', chim: 'chim', ho: 'hổ',
+};
 
 /** Giới hạn để server chặn giá trị settings vô lý từ client. */
 export function sanitizeSettings(patch: Partial<GameSettings>, base: GameSettings): GameSettings {

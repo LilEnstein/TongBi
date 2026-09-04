@@ -56,3 +56,37 @@ export function toonGradient(): DataTexture {
 export function tongDa(seed: number): string {
   return DA_RAM[Math.abs(seed) % DA_RAM.length]!;
 }
+
+/**
+ * Bảng lông của mười con vật tranh dân gian — §3.1 mở rộng cho §9.1.
+ *
+ * Mỗi con ba tông: lông chính, tông tối (bụng dưới, vệt, trong tai) và tông
+ * sáng (ức, mõm, quầng mắt). Màu lấy trong dải đất–nghệ–chàm của bảng gốc để
+ * cả sân vẫn nằm trong một bức tranh, không con nào nhảy ra ngoài.
+ */
+export interface BoLong {
+  chinh: string;
+  toi: string;
+  sang: string;
+}
+
+export const LONG: Record<string, BoLong> = {
+  trau: { chinh: '#5C5A63', toi: '#3A3941', sang: '#8E8B93' },
+  ga: { chinh: '#C4322A', toi: '#8A2019', sang: '#E8A72E' },
+  lon: { chinh: '#E0A79C', toi: '#B87A70', sang: '#F4D2C9' },
+  meo: { chinh: '#E7C170', toi: '#A87C24', sang: '#F6ECD2' },
+  chuot: { chinh: '#9A8E80', toi: '#6E6459', sang: '#D8CDBC' },
+  coc: { chinh: '#6E8A3C', toi: '#455825', sang: '#A9BE72' },
+  ca: { chinh: '#D9772F', toi: '#9E4E17', sang: '#F2C88A' },
+  vit: { chinh: '#F2E5C4', toi: '#BFA97A', sang: '#FFF8E4' },
+  chim: { chinh: '#2F6E63', toi: '#1C4740', sang: '#E8A72E' },
+  ho: { chinh: '#E09A3C', toi: '#2A211B', sang: '#F6ECD2' },
+};
+
+/** Lông của con vật đã ra ngồi ngoài: bạc đi như tranh phơi nắng lâu ngày. */
+export const LONG_MO: BoLong = { chinh: '#9A8471', toi: '#75665A', sang: '#C3B6A5' };
+
+export function boLong(loai: string, mo = false): BoLong {
+  if (mo) return LONG_MO;
+  return LONG[loai] ?? LONG.trau!;
+}

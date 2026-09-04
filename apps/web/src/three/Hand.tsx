@@ -29,7 +29,15 @@ export interface HandDrive {
 }
 
 interface HandProps extends HandDrive {
+  /**
+   * Trạng thái đã làm mượt, dùng chung với con vật đang cầm bàn tay này.
+   * Bàn tay là nơi duy nhất ghi vào nó; con vật chỉ đọc để nối cánh tay vào
+   * cổ tay. Không truyền thì bàn tay tự giữ một bản riêng.
+   */
+  drive?: HandDrive;
   skin?: string;
+  /** Ống tay: vải nâu với người, lông với con vật. */
+  ongTay?: string;
   /** Màu đội, buộc ở cổ tay bằng vòng chỉ / dây chun. */
   chiCoTay?: string;
   /** Vẽ viền mực quanh các khối — chỉ bật cho tay của chính mình (§9.1). */
@@ -154,7 +162,9 @@ export function Hand({
   curl,
   reach,
   lift = 0,
+  drive: driveNgoai,
   skin = '#C98A5B',
+  ongTay = MAU.vaiNau,
   chiCoTay = MAU.dieu,
   vien = false,
   cuChi = 'yen',
@@ -166,7 +176,8 @@ export function Hand({
   const thumbJ2 = useRef<Group>(null);
   const palmContent = useRef<Group>(null);
   // Đối tượng dùng chung, được Hand làm mượt mỗi frame và mọi khớp đọc lại.
-  const drive = useMemo(() => ({ curl, reach, lift }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const driveRieng = useMemo(() => ({ curl, reach, lift }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const drive = driveNgoai ?? driveRieng;
 
   useFrame((_, dt) => {
     const step = Math.min(dt, 0.05);
@@ -201,7 +212,7 @@ export function Hand({
   return (
     <group ref={root}>
       {/* Cẳng tay trong ống tay áo vải nâu, rồi tới cổ tay */}
-      <Dot args={[0.086, 0.4, 4, 10]} position={[0, -0.02, 0.42]} mau={MAU.vaiNau} vien={vien} />
+      <Dot args={[0.086, 0.4, 4, 10]} position={[0, -0.02, 0.42]} mau={ongTay} vien={vien} />
       <Dot args={[0.07, 0.14, 4, 10]} position={[0, -0.01, 0.17]} mau={skin} vien={vien} />
 
       {/* Vòng chỉ đỏ / dây chun màu đội ở cổ tay — chỗ duy nhất mang màu đội. */}

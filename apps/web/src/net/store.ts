@@ -10,6 +10,7 @@ import type {
 import { getSocket } from './socket.js';
 import { loadSession, saveSession } from '../lib/session.js';
 import { nenSan, sfx } from '../audio/sfx.js';
+import { nhacNen } from '../audio/nhacNen.js';
 
 export interface Toast {
   id: number;
@@ -126,7 +127,12 @@ export function wireSocket(): void {
     }));
     if (prev && prev.phase !== state.phase) sfx.phase(state.phase);
     // Ve sầu to dần theo độ căng của phase — art direction §12.
-    nenSan.cang(DO_CANG[state.phase] ?? 0.3);
+    const cang = DO_CANG[state.phase] ?? 0.3;
+    nenSan.cang(cang);
+    // Nhạc nền đi ngược lại: sân càng căng thì liên khúc càng lùi ra sau.
+    nhacNen.cang(cang);
+    // Mở tay có 0.4s im lặng trước khi bi lăn — nhạc phải nhường đúng chỗ đó.
+    if (state.phase === 'REVEAL') nhacNen.nep(2200);
   });
 
   socket.on('PRIVATE_STATE', (priv) => useGame.setState({ privateState: priv }));
@@ -150,6 +156,7 @@ export function wireSocket(): void {
   socket.on('DICE_ROLL_STARTED', ({ playerId, at }) => {
     useGame.setState({ diceCue: { playerId, at, outcome: null } });
     sfx.lacXucXac();
+    nhacNen.nep(1400);
   });
 
   socket.on('DICE_ROLL_RESULT', (outcome) => {

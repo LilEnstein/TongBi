@@ -1,4 +1,4 @@
-import type { SessionCredentials } from '@tongbi/game-rules';
+import { AVATAR_MAC_DINH, type SessionCredentials } from '@tongbi/game-rules';
 
 const KEY = 'tongbi.session';
 const PROFILE_KEY = 'tongbi.profile';
@@ -35,12 +35,12 @@ export function loadProfile(): Profile {
     const raw = localStorage.getItem(PROFILE_KEY);
     if (raw) {
       const p = JSON.parse(raw) as Partial<Profile>;
-      if (p.name) return { name: p.name, avatar: p.avatar ?? '🐯' };
+      if (p.name) return { name: p.name, avatar: p.avatar ?? AVATAR_MAC_DINH };
     }
   } catch {
     /* ignore */
   }
-  return { name: '', avatar: '🐯' };
+  return { name: '', avatar: AVATAR_MAC_DINH };
 }
 
 export function saveProfile(p: Profile): void {

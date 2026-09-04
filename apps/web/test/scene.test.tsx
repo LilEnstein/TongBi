@@ -8,12 +8,14 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { Mesh, Object3D } from 'three';
 import {
+  AVATARS,
   DEFAULT_SETTINGS,
   GamePhase,
   TEAM_COLORS,
   type Player,
   type PublicRoomState,
 } from '@tongbi/game-rules';
+import { ConVat, loaiConVat, type TuThe } from '../src/three/ConVat.js';
 import { Hand } from '../src/three/Hand.js';
 import { PlayerSeat } from '../src/three/PlayerSeat.js';
 import { San } from '../src/three/San.js';
@@ -86,6 +88,15 @@ function hasNamed(renderer: { scene: { instance: Object3D } }, name: string): bo
     if (o.name === name) found = true;
   });
   return found;
+}
+
+/** Đếm object theo tên — dùng để tách bi trong tay khỏi bi trong đống trên đất. */
+function countNamed(renderer: { scene: { instance: Object3D } }, name: string): number {
+  let n = 0;
+  renderer.scene.instance.traverse((o) => {
+    if (o.name === name) n += 1;
+  });
+  return n;
 }
 
 describe('Bàn tay có rig — design doc §4', () => {
@@ -169,8 +180,9 @@ describe('Chỗ ngồi và thông tin ẩn — design doc §18', () => {
         isRolling={false}
       />,
     );
-    // Chỉ có đống bi trên đất (7 viên x 2 mesh: vỏ thuỷ tinh + dải xoáy), không có bi trong tay.
-    expect(countGeometry(renderer, 'SphereGeometry')).toBe(14);
+    // Chỉ có đống bi trên đất; trong lòng bàn tay không có viên nào.
+    expect(countNamed(renderer, 'bi-tren-dat')).toBe(7);
+    expect(countNamed(renderer, 'bi-trong-tay')).toBe(0);
     await renderer.unmount();
   });
 
@@ -190,8 +202,8 @@ describe('Chỗ ngồi và thông tin ẩn — design doc §18', () => {
         isRolling={false}
       />,
     );
-    // 7 viên trong đống + 3 viên trong tay = 10 viên x 2 mesh (vỏ + dải xoáy).
-    expect(countGeometry(renderer, 'SphereGeometry')).toBe(20);
+    expect(countNamed(renderer, 'bi-tren-dat')).toBe(7);
+    expect(countNamed(renderer, 'bi-trong-tay')).toBe(3);
     await renderer.unmount();
   });
 
@@ -212,7 +224,8 @@ describe('Chỗ ngồi và thông tin ẩn — design doc §18', () => {
         isRolling={false}
       />,
     );
-    expect(countGeometry(renderer, 'SphereGeometry')).toBe(0);
+    expect(countNamed(renderer, 'bi-tren-dat')).toBe(0);
+    expect(countNamed(renderer, 'bi-trong-tay')).toBe(0);
     await renderer.unmount();
   });
 });
@@ -244,8 +257,129 @@ describe('Sân đông', () => {
     );
     // 8 bàn tay x 14 capsule đốt trở lên.
     expect(countGeometry(renderer, 'CapsuleGeometry')).toBeGreaterThanOrEqual(8 * 14);
-    // 8 người x 10 bi x 2 mesh.
-    expect(countGeometry(renderer, 'SphereGeometry')).toBe(160);
+    // 8 người x 10 bi trong đống trên đất.
+    expect(countNamed(renderer, 'bi-tren-dat')).toBe(80);
+    // Chưa reveal thì không ai thấy bi trong tay ai, kể cả của chính mình khi
+    // chưa chốt số.
+    expect(countNamed(renderer, 'bi-trong-tay')).toBe(0);
     await renderer.unmount();
+  });
+});
+
+describe('Con vật 3D — art direction §9.1 mở rộng', () => {
+  const drive = { curl: 0, reach: 0, lift: 0 };
+
+  it('dựng được cả mười con vật, mỗi con một hình khối riêng', async () => {
+    const soMesh: Record<string, number> = {};
+    for (const loai of AVATARS) {
+      const r = await ReactThreeTestRenderer.create(
+        <ConVat loai={loai} drive={drive} tuThe="ngoi" seed={7} doi="#C4322A" />,
+      );
+      soMesh[loai] = countObjects(r);
+      // Con nào cũng phải có đầu, thân và mắt — tối thiểu chục object.
+      expect(soMesh[loai]).toBeGreaterThan(10);
+      await r.unmount();
+    }
+    // Mười con không được ra cùng một bộ khối: phải có ít nhất bốn dáng khác nhau.
+    expect(new Set(Object.values(soMesh)).size).toBeGreaterThanOrEqual(4);
+  });
+
+  it('avatar lạ (emoji của hồ sơ cũ) lùi về con mặc định thay vì vỡ cảnh', async () => {
+    expect(loaiConVat('🐯')).toBe('trau');
+    expect(loaiConVat('ho')).toBe('ho');
+    const r = await ReactThreeTestRenderer.create(
+      <ConVat loai="🐯" drive={drive} tuThe="ngoi" seed={1} doi="#4C7A38" />,
+    );
+    expect(countObjects(r)).toBeGreaterThan(10);
+    await r.unmount();
+  });
+
+  it('đổi tư thế không thêm bớt khớp nào — animation chạy ngoài React', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <ConVat loai="meo" drive={drive} tuThe="ngoi" seed={3} doi="#1F3F63" />,
+    );
+    const ngoi = countObjects(r);
+    for (const tuThe of ['chom', 'ngong', 'reo', 'xiu', 'tung'] as TuThe[]) {
+      await r.update(<ConVat loai="meo" drive={drive} tuThe={tuThe} seed={3} doi="#1F3F63" />);
+      expect(countObjects(r)).toBe(ngoi);
+    }
+    await r.unmount();
+  });
+
+  it('sân đông thì hạ chi tiết xuống để giữ framerate (§15)', async () => {
+    const dem = async (chiTiet: 'cao' | 'vua' | 'thap') => {
+      const r = await ReactThreeTestRenderer.create(
+        <ConVat loai="ho" drive={drive} tuThe="ngoi" seed={5} doi="#E8A72E" chiTiet={chiTiet} />,
+      );
+      const n = countObjects(r);
+      await r.unmount();
+      return n;
+    };
+    const cao = await dem('cao');
+    const vua = await dem('vua');
+    const thap = await dem('thap');
+    expect(thap).toBeLessThan(vua);
+    expect(vua).toBeLessThan(cao);
+  });
+});
+
+describe('Xoay sân không được làm lộ thông tin ẩn — design doc §18', () => {
+  /**
+   * Camera xoay được nên phải chắc chắn rằng bi của người khác KHÔNG nằm trong
+   * scene, chứ không phải chỉ bị che khuất. Nếu nó có mặt trong scene graph thì
+   * xoay tới đúng góc là thấy, và không có cách nào chặn được ở phía client.
+   */
+  it('bi của người khác không tồn tại trong scene ở mọi phase trước khi mở tay', async () => {
+    const khac = player('doi-thu', 1, 9);
+    const truocKhiMo = [
+      GamePhase.ROUND_START,
+      GamePhase.SELECT_MARBLES,
+      GamePhase.CLOSE_HAND,
+      GamePhase.GUESS_TOTAL,
+    ];
+
+    for (const phase of truocKhiMo) {
+      const r = await ReactThreeTestRenderer.create(
+        <PlayerSeat
+          player={khac}
+          round={{ submitted: true, revealed: null, autoSubmitted: false }}
+          phase={phase}
+          phaseStartedAt={Date.now()}
+          angle={0}
+          teamColor="#1F3F63"
+          isLocal={false}
+          knownMarbles={null}
+          openHandAt={null}
+          isWinner={false}
+          isRolling={false}
+        />,
+      );
+      expect(countNamed(r, 'bi-trong-tay')).toBe(0);
+      await r.unmount();
+    }
+  });
+
+  it('con vật của người khác không mang theo số bi nào để đọc ra', async () => {
+    const khac = player('doi-thu', 2, 12);
+    const r = await ReactThreeTestRenderer.create(
+      <PlayerSeat
+        player={khac}
+        round={{ submitted: true, revealed: null, autoSubmitted: false }}
+        phase={GamePhase.GUESS_TOTAL}
+        phaseStartedAt={Date.now()}
+        angle={Math.PI}
+        teamColor="#4C7A38"
+        isLocal={false}
+        knownMarbles={null}
+        openHandAt={null}
+        isWinner={false}
+        isRolling={false}
+      />,
+    );
+    // Đống bi trên đất là thông tin công khai (ai cũng thấy túi bi của nhau),
+    // nhưng số bi đang giấu trong tay thì không có mặt ở đâu trong scene.
+    expect(countNamed(r, 'bi-tren-dat')).toBe(12);
+    expect(countNamed(r, 'bi-trong-tay')).toBe(0);
+    await r.unmount();
   });
 });

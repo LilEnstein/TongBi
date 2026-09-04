@@ -9,6 +9,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
 import {
+  AVATAR_MAC_DINH,
   ErrorCode,
   GamePhase,
   type AckError,
@@ -44,7 +45,7 @@ io.on('connection', (socket) => {
 
     const playerId = newPlayerId();
     const token = newToken();
-    const added = room.addPlayer(playerId, token, payload?.name ?? '', payload?.avatar ?? '🐯', s.id);
+    const added = room.addPlayer(playerId, token, payload?.name ?? '', payload?.avatar ?? AVATAR_MAC_DINH, s.id);
     if (!added.ok) {
       rooms.delete(room.id);
       ack?.({ ok: false, error: added.error, code: added.code });
@@ -87,7 +88,7 @@ io.on('connection', (socket) => {
 
     const playerId = newPlayerId();
     const token = newToken();
-    const added = room.addPlayer(playerId, token, payload?.name ?? '', payload?.avatar ?? '🐯', s.id);
+    const added = room.addPlayer(playerId, token, payload?.name ?? '', payload?.avatar ?? AVATAR_MAC_DINH, s.id);
     if (!added.ok) {
       ack?.({ ok: false, error: added.error, code: added.code });
       return;
@@ -367,6 +368,7 @@ const MIME: Record<string, string> = {
   '.webp': 'image/webp',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
+  '.mp3': 'audio/mpeg',
 };
 
 /** Phục vụ SPA đã build; mọi route không phải file đều trả về index.html. */

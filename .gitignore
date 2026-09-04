@@ -6,3 +6,11 @@ dist/
 .DS_Store
 .vite/
 coverage/
+
+# Nhạc gốc 340 MB tải về từ YouTube — chỉ giữ bản đã cắt/nén trong
+# apps/web/public/assets/ để deploy.
+sounds/
+
+# Bản cắt 512px trung gian của avatar — sinh lại được bằng tools/cat_mat.py.
+# Bản game dùng là WebP 256px trong apps/web/public/mat/, có commit.
+mat_cutout/

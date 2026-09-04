@@ -4,7 +4,7 @@
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AVATARS, type SessionCredentials } from '@tongbi/game-rules';
+import { AVATAR_TEN, AVATARS, type SessionCredentials } from '@tongbi/game-rules';
 import { emitAck } from '../net/socket.js';
 import { useGame } from '../net/store.js';
 import { loadProfile, saveProfile } from '../lib/session.js';
@@ -93,7 +93,7 @@ export function Home() {
                 <button
                   key={a}
                   onClick={() => setAvatar(a)}
-                  aria-label={`Chọn mặt ${a}`}
+                  aria-label={`Chọn mặt ${AVATAR_TEN[a] ?? a}`}
                   aria-pressed={a === avatar}
                 >
                   <Non avatar={a} chon={a === avatar} />
