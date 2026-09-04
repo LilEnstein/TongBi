@@ -2,9 +2,13 @@
  * Nhạc nền — liên khúc sáo trúc & piano đồng dao Việt Nam.
  *
  * Đây là file audio duy nhất của game (mọi tiếng động khác vẫn tổng hợp bằng
- * WebAudio trong `sfx.ts`). Bản gốc dài 2h22 nên đã cắt thành một đoạn 6'30"
- * lặp liền mạch (đuôi đã crossfade sẵn vào đầu) rồi nén 96 kbps ≈ 4,5 MB, đủ
+ * WebAudio trong `sfx.ts`). Bản gốc dài 2h22 nên đã cắt thành một đoạn 3'20"
+ * lặp liền mạch (đuôi đã crossfade sẵn vào đầu) rồi nén 96 kbps ≈ 2,4 MB, đủ
  * nhẹ để 30 người trong phòng tải qua 4G.
+ *
+ * Số trong tên file là số phiên bản, KHÔNG được thay nội dung mà giữ nguyên
+ * tên: `/assets/` mang header `Cache-Control: immutable` một năm, nên client
+ * đã tải bản cũ sẽ không bao giờ thấy bản mới. Đổi nhạc thì tăng số lên.
  *
  * Dùng <audio> chứ không nạp vào AudioBuffer: 6'30" stereo 44.1kHz giải nén ra
  * gần 140 MB RAM, điện thoại tầm trung không chịu được. Âm lượng điều khiển
@@ -12,7 +16,7 @@
  */
 import { setMuted } from './sfx.js';
 
-const DUONG_DAN = `${import.meta.env.BASE_URL}assets/nhac-nen-v1.mp3`;
+const DUONG_DAN = `${import.meta.env.BASE_URL}assets/nhac-nen-v2.mp3`;
 
 /** Nhạc chỉ là lớp lót dưới tiếng sáo/trống của game, không được lấn lên. */
 const MUC_NEN = 0.32;
