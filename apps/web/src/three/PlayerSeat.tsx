@@ -1,15 +1,20 @@
 /**
- * Một chỗ ngồi quanh bàn: bàn tay, đống bi, bi bay vào lòng bàn tay và nhãn tên.
- * Đây là nơi ánh xạ phase của server thành animation — client không tự quyết định
- * gì về gameplay, chỉ diễn hoạt theo state nhận được (design doc §21).
+ * Một chỗ ngồi bệt quanh vòng tròn: bàn tay, đống bi đặt trên đất, bi bay vào
+ * lòng bàn tay và nhãn tên. Đây là nơi ánh xạ phase của server thành animation —
+ * client không tự quyết định gì về gameplay, chỉ diễn hoạt theo state nhận được
+ * (design doc §21).
  */
-import { useEffect, useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
-import type { Group } from 'three';
-import { GamePhase, type Player, type PlayerRoundPublic } from '@tongbi/game-rules';
-import { Hand } from './Hand.js';
-import { Marble, marbleColor } from './Marble.js';
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
+import type { Group } from "three";
+import {
+  GamePhase,
+  type Player,
+  type PlayerRoundPublic,
+} from "@tongbi/game-rules";
+import { Hand, type CuChi } from "./Hand.js";
+import { Marble, marbleColor } from "./Marble.js";
 import {
   easeOutCubic,
   facingCenter,
@@ -18,18 +23,21 @@ import {
   SEAT_RADIUS,
   seatPosition,
   smoothstep,
-} from './geometry.js';
-import { sfx } from '../audio/sfx.js';
+} from "./geometry.js";
+import { DA_MO, tongDa } from "./toon.js";
+import { sfx } from "../audio/sfx.js";
 
-/** Vị trí đống bi trong hệ toạ độ của ghế. */
-const PILE_OFFSET: [number, number, number] = [0.44, 0.04, 0.34];
+/** Đống bi nằm ngay trên nền đất, cạnh đầu gối. */
+const PILE_OFFSET: [number, number, number] = [0.44, 0.052, 0.3];
 /** Lòng bàn tay nằm khoảng đây khi tay đã vươn ra — dùng để tính đường bay của bi. */
-const PALM_IN_SEAT: [number, number, number] = [0, 0.38, -0.67];
+const PALM_IN_SEAT: [number, number, number] = [0, 0.36, -0.66];
 const FLY_DURATION = 0.55;
 const FLY_STAGGER = 0.075;
 /** Bi bay xong rồi tay mới khép lại. */
 const CLOSE_DELAY = 0.95;
 const MAX_PILE_MESHES = 24;
+/** Bàn tay và bi được phóng to so với vòng tròn để đọc rõ trên điện thoại. */
+const TY_LE_TAY = 1.35;
 
 interface SeatProps {
   player: Player;
@@ -37,20 +45,25 @@ interface SeatProps {
   phase: GamePhase;
   phaseStartedAt: number;
   angle: number;
-  /** Bán kính vòng ghế — nới rộng khi phòng đông. */
+  /** Bán kính vòng người ngồi — nới rộng khi sân đông. */
   radius?: number;
   teamColor: string;
   isLocal: boolean;
-  /** Số bi thật trong tay: của chính mình thì biết sớm, của người khác chỉ biết sau REVEAL. */
+  /** Số bi thật trong tay: của mình thì biết sớm, của người khác chỉ biết sau REVEAL. */
   knownMarbles: number | null;
   /** Mốc mở tay của riêng người này trong chuỗi reveal; null nếu chưa tới. */
   openHandAt: number | null;
   isWinner: boolean;
   isRolling: boolean;
+  /** Vẽ viền mực quanh bàn tay — chỉ bật khi sân vắng, để giữ 60fps (§15). */
+  vienMuc?: boolean;
+  /** Camera đang ở khung cận (sát tay / sát xúc xắc) — nhãn của chính mình
+      sẽ bị phóng to che hết sân nên phải giấu đi. */
+  khungGan?: boolean;
 }
 
 /** Bi bay từ đống bi vào lòng bàn tay rồi nằm lại thành cụm. */
-function PalmMarbles({
+function BiTrongTay({
   count,
   seed,
   startAt,
@@ -61,10 +74,10 @@ function PalmMarbles({
 }) {
   const refs = useRef<Array<Group | null>>([]);
   const cluster = useMemo(() => palmCluster(count), [count]);
-  const dropped = useRef(new Set<number>());
+  const daRoi = useRef(new Set<number>());
 
   useEffect(() => {
-    dropped.current.clear();
+    daRoi.current.clear();
   }, [startAt, count]);
 
   useFrame(() => {
@@ -76,7 +89,7 @@ function PalmMarbles({
       const local = (t - i * FLY_STAGGER) / FLY_DURATION;
       const k = Math.min(1, Math.max(0, local));
       const e = easeOutCubic(k);
-      // Điểm xuất phát: đống bi, quy đổi sang hệ toạ độ của lòng bàn tay.
+      // Điểm xuất phát: đống bi trên đất, quy đổi sang hệ toạ độ của lòng bàn tay.
       const fromX = PILE_OFFSET[0] - PALM_IN_SEAT[0];
       const fromY = PILE_OFFSET[1] - PALM_IN_SEAT[1];
       const fromZ = PILE_OFFSET[2] - PALM_IN_SEAT[2];
@@ -86,9 +99,9 @@ function PalmMarbles({
         fromZ + (target[2] - fromZ) * e,
       );
       g.scale.setScalar(k <= 0 ? 0 : 1);
-      if (k >= 1 && !dropped.current.has(i) && startAt !== null) {
-        dropped.current.add(i);
-        if (i < 6) sfx.marbleDrop(0);
+      if (k >= 1 && !daRoi.current.has(i) && startAt !== null) {
+        daRoi.current.add(i);
+        if (i < 6) sfx.biRoi(0);
       }
     }
   });
@@ -122,13 +135,16 @@ export function PlayerSeat({
   openHandAt,
   isWinner,
   isRolling,
+  vienMuc = false,
+  khungGan = false,
 }: SeatProps) {
   const submitted = round?.submitted ?? false;
   const submittedAt = useRef<number | null>(null);
 
   // Ghi lại thời điểm người này chốt bi để chạy chuỗi "bi bay vào tay → nắm tay".
   useEffect(() => {
-    if (submitted && submittedAt.current === null) submittedAt.current = Date.now();
+    if (submitted && submittedAt.current === null)
+      submittedAt.current = Date.now();
     if (!submitted) submittedAt.current = null;
   }, [submitted]);
   useEffect(() => {
@@ -140,18 +156,20 @@ export function PlayerSeat({
     [player.marbleCount],
   );
   const seed = useMemo(
-    () => player.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0),
+    () => player.id.split("").reduce((a, c) => a + c.charCodeAt(0), 0),
     [player.id],
   );
 
   // ── Ánh xạ phase → tư thế tay ──
   const now = Date.now();
-  const sinceSubmit = submittedAt.current === null ? 0 : (now - submittedAt.current) / 1000;
+  const sinceSubmit =
+    submittedAt.current === null ? 0 : (now - submittedAt.current) / 1000;
   const opened = openHandAt !== null && now >= openHandAt;
 
   let curl = 0.14;
   let reach = 0;
   let lift = 0;
+  let cuChi: CuChi = "yen";
 
   switch (phase) {
     case GamePhase.SELECT_MARBLES:
@@ -161,12 +179,16 @@ export function PlayerSeat({
       } else {
         reach = 0.2;
         curl = 0.1;
+        // Quệt tay vào quần trước khi bốc bi — clip wipe_dirt (§9.1).
+        cuChi = "quet-quan";
       }
       break;
     case GamePhase.CLOSE_HAND:
     case GamePhase.GUESS_TOTAL:
       reach = 1;
       curl = 1;
+      // Mình thì hé tay nhìn trộm bi của chính mình; vài đứa khác thì lắc tay trêu.
+      cuChi = isLocal ? "nhin-trom" : seed % 4 === 0 ? "lac-tay" : "yen";
       break;
     case GamePhase.REVEAL:
       reach = 1;
@@ -194,6 +216,7 @@ export function PlayerSeat({
     curl = 0.14;
     reach = 0;
     lift = 0;
+    cuChi = "yen";
   }
 
   // Bi hiển thị trong lòng bàn tay: chỉ khi thực sự được phép biết con số.
@@ -206,59 +229,95 @@ export function PlayerSeat({
         : null;
 
   const pos = seatPosition(angle, radius);
-  const dim = player.eliminated || !player.connected;
+  const mo = player.eliminated || !player.connected;
+  const doi = doiTuMau(teamColor);
+  const nhanQuaGan = isLocal && khungGan;
+  // Số bi chỉ được đóng dấu xuống đất trong lúc mở tay và lúc đếm bi.
+  const hienDauMuc =
+    opened &&
+    knownMarbles !== null &&
+    !nhanQuaGan &&
+    (phase === GamePhase.REVEAL || phase === GamePhase.ROUND_RESULT);
 
   return (
     <group position={pos} rotation={[0, facingCenter(angle), 0]}>
-      <Hand
-        curl={curl}
-        reach={reach}
-        lift={lift}
-        skin={dim ? '#8d7a6e' : '#e8b48c'}
-        sleeve={teamColor}
-      >
-        {palmCount > 0 && <PalmMarbles count={palmCount} seed={seed} startAt={flyStart} />}
-      </Hand>
+      {/* Tay và bi phóng to hơn tỉ lệ hình học của vòng tròn: bàn tay là nhân
+          vật chính của khung hình, phải đọc được cả khi ngồi bên kia sân (§9.1). */}
+      <group scale={TY_LE_TAY}>
+        <Hand
+          curl={curl}
+          reach={reach}
+          lift={lift}
+          skin={mo ? DA_MO : tongDa(seed)}
+          chiCoTay={teamColor}
+          vien={vienMuc}
+          cuChi={cuChi}
+        >
+          {palmCount > 0 && (
+            <BiTrongTay count={palmCount} seed={seed} startAt={flyStart} />
+          )}
+        </Hand>
 
-      {/* Đống bi còn lại trước mặt người chơi */}
-      <group position={PILE_OFFSET}>
-        {pile.map((p, i) => (
-          <Marble key={i} position={p} color={marbleColor(seed + i)} scale={dim ? 0.8 : 1} />
-        ))}
+        {/* Đống bi còn lại nằm trên đất trước mặt */}
+        <group position={PILE_OFFSET}>
+          {pile.map((p, i) => (
+            <Marble
+              key={i}
+              position={p}
+              color={marbleColor(seed + i)}
+              scale={mo ? 0.8 : 1}
+            />
+          ))}
+        </group>
       </group>
 
-      {/* Nhãn tên + số bi, luôn quay về phía camera */}
-      <Html
-        position={[0, 0.86, 0.62]}
-        center
-        distanceFactor={7}
-        zIndexRange={[20, 0]}
-        pointerEvents="none"
-      >
-        <div className={`seat-tag${dim ? ' seat-tag--dim' : ''}${isWinner ? ' seat-tag--win' : ''}`}>
-          <span className="seat-tag__avatar">{player.avatar}</span>
-          <span className="seat-tag__name" style={{ color: teamColor }}>
-            {player.name}
-            {isLocal ? ' (bạn)' : ''}
-          </span>
-          <span className="seat-tag__marbles">
-            <b>{player.marbleCount}</b> bi
-          </span>
-          {player.eliminated && <span className="seat-tag__badge">OUT</span>}
-          {!player.connected && !player.eliminated && (
-            <span className="seat-tag__badge seat-tag__badge--warn">mất kết nối</span>
-          )}
-          {submitted && phase === GamePhase.SELECT_MARBLES && (
-            <span className="seat-tag__badge seat-tag__badge--ok">đã giấu bi</span>
-          )}
-        </div>
-      </Html>
-
-      {/* Số bi thật, hiện lên khi mở tay */}
-      {opened && knownMarbles !== null && (
-        <Html position={[0, 0.62, -0.5]} center distanceFactor={6.4} pointerEvents="none">
+      {/* Nhãn tên viết trên mẩu giấy dó, luôn quay về phía camera.
+          Ở khung cận tay (SELECT/CLOSE_HAND) camera nằm ngay trước mặt mình nên
+          nhãn của chính mình bị phóng to che hết sân — lúc đó giấu nó đi. */}
+      {!nhanQuaGan && (
+        <Html
+          position={[0, 1, 0.62]}
+          center
+          distanceFactor={7}
+          /* Nhãn luôn nằm dưới panel giấy dó ở nửa dưới màn hình. */
+          zIndexRange={[3, 0]}
+          pointerEvents="none"
+        >
           <div
-            className="reveal-pop"
+            className={`nhan-ghe${mo ? " mo" : ""}${isWinner ? " thang" : ""}`}
+          >
+            <span
+              className="day-doi"
+              style={{ background: teamColor }}
+              title={doi}
+            />
+            <span>
+              {player.avatar} {player.name}
+              {isLocal ? " (bạn)" : ""}
+            </span>
+            <span className="may-bi so">{player.marbleCount}</span>
+            {player.eliminated && <span className="co">ngồi ngoài</span>}
+            {!player.connected && !player.eliminated && (
+              <span className="co">rớt mạng</span>
+            )}
+            {submitted && phase === GamePhase.SELECT_MARBLES && (
+              <span className="co xong">giấu rồi</span>
+            )}
+          </div>
+        </Html>
+      )}
+
+      {/* Số bi thật, đóng dấu mực xuống đất khi mở tay */}
+      {hienDauMuc && (
+        <Html
+          position={[0, 0.62, -0.5]}
+          center
+          distanceFactor={5}
+          zIndexRange={[3, 0]}
+          pointerEvents="none"
+        >
+          <div
+            className="dau-muc so"
             style={{ opacity: smoothstep(0, 260, now - (openHandAt ?? now)) }}
           >
             {knownMarbles}
@@ -267,4 +326,18 @@ export function PlayerSeat({
       )}
     </group>
   );
+}
+
+/** Tên vật nhận dạng của đội, dùng làm tooltip cho dải màu ở nhãn ghế (§3.2). */
+function doiTuMau(color: string): string {
+  switch (color.toUpperCase()) {
+    case "#1F3F63":
+      return "khăn mỏ quạ";
+    case "#C4322A":
+      return "dây chun đỏ";
+    case "#4C7A38":
+      return "tàu lá chuối";
+    default:
+      return "nón lá";
+  }
 }

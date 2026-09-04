@@ -43,9 +43,18 @@ export function revealStepMs(count: number): number {
   return Math.min(REVEAL_STEP_MAX_MS, Math.max(REVEAL_STEP_MIN_MS, perPlayer));
 }
 
-/** Màu đội — dùng chung cho UI và scene 3D. */
-export const TEAM_COLORS = ['#f0503c', '#3c8cf0', '#3cc86e', '#f0b43c'] as const;
-export const TEAM_NAMES = ['Đội Đỏ', 'Đội Xanh', 'Đội Lá', 'Đội Vàng'] as const;
+/**
+ * Màu đội lấy từ vật liệu — art direction §3.2: chàm, đỏ điều, lá chuối, vàng nghệ.
+ * Dùng chung cho UI 2D và vòng chỉ ở cổ tay trong scene 3D.
+ */
+export const TEAM_COLORS = ['#1F3F63', '#C4322A', '#4C7A38', '#E8A72E'] as const;
+export const TEAM_NAMES = ['Đội Chàm', 'Đội Điều', 'Đội Lá', 'Đội Nghệ'] as const;
+
+/**
+ * Mỗi đội có một vật nhận dạng ngoài màu, để người mù màu vẫn phân biệt được
+ * (art direction §3.2). Thứ tự khớp với TEAM_COLORS.
+ */
+export const TEAM_MARKS = ['khăn mỏ quạ', 'dây chun đỏ', 'tàu lá chuối', 'nón lá'] as const;
 
 export const AVATARS = ['🐯', '🐼', '🦊', '🐸', '🐵', '🐧', '🦁', '🐨', '🐰', '🐮'] as const;
 

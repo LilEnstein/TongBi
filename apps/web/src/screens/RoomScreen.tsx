@@ -1,6 +1,9 @@
 /**
- * Màn hình phòng chơi: cùng một scene 3D cho mọi người, panel đổi theo phase.
+ * Sân chơi: cùng một nền đất cho mọi người, panel đổi theo phase.
  * Mọi hành động đều gửi lên server rồi chờ state mới — client không tự đổi gì.
+ *
+ * Art direction §2: mỗi phase là một khung giờ khác nhau trong buổi chiều,
+ * đổi bằng tint của lớp .nang chứ không đổi cả cảnh.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -8,6 +11,7 @@ import { AVATARS, GamePhase, type Penalty, type SessionCredentials } from '@tong
 import { emitAck, getSocket, ServerError } from '../net/socket.js';
 import { useGame } from '../net/store.js';
 import { loadProfile, saveProfile } from '../lib/session.js';
+import { useCountdown } from '../lib/useCountdown.js';
 import { Scene } from '../three/Scene.js';
 import { Hud } from '../ui/Hud.js';
 import { WaitingRoom } from '../ui/WaitingRoom.js';
@@ -16,9 +20,23 @@ import { GuessPanel } from '../ui/GuessPanel.js';
 import { ResultPanel } from '../ui/ResultPanel.js';
 import { DicePanel } from '../ui/DicePanel.js';
 import { GameOver } from '../ui/GameOver.js';
-import { Button } from '../ui/common.js';
+import { BuiDoi, CanhCua, GiayDo, LaTreRoi, Met, Non, Nut } from '../ui/common.js';
+import { sfx } from '../audio/sfx.js';
 
 type JoinState = 'idle' | 'joining' | 'joined' | 'need-name' | 'error';
+
+/** Phase nào ứng với khung giờ nào trong buổi chiều — art direction §2. */
+const GIO_THEO_PHASE: Record<string, string> = {
+  WAITING: '8h',
+  ROUND_START: '10h',
+  SELECT_MARBLES: '10h',
+  CLOSE_HAND: '10h',
+  GUESS_TOTAL: '12h',
+  REVEAL: '12h',
+  ROUND_RESULT: '12h',
+  DICE_ROLL: '15h',
+  GAME_OVER: '17h',
+};
 
 export function RoomScreen() {
   const { code = '' } = useParams();
@@ -34,11 +52,12 @@ export function RoomScreen() {
   const diceCue = useGame((s) => s.diceCue);
   const kicked = useGame((s) => s.kicked);
   const reset = useGame((s) => s.reset);
-  const pushToast = useGame((s) => s.pushToast);
+  const baoTin = useGame((s) => s.pushToast);
 
   const [state, setState] = useState<JoinState>('idle');
-  const [error, setError] = useState('');
-  const [errorCode, setErrorCode] = useState<string | undefined>(undefined);
+  const [daBaoLoai, setDaBaoLoai] = useState(false);
+  const [loi, setLoi] = useState('');
+  const [maLoi, setMaLoi] = useState<string | undefined>(undefined);
   const profile = loadProfile();
   const [name, setName] = useState(profile.name);
   const [avatar, setAvatar] = useState(profile.avatar);
@@ -58,15 +77,15 @@ export function RoomScreen() {
         setCredentials(res.credentials);
         setState('joined');
       } catch (e) {
-        setError((e as Error).message);
-        setErrorCode(e instanceof ServerError ? e.code : undefined);
+        setLoi((e as Error).message);
+        setMaLoi(e instanceof ServerError ? e.code : undefined);
         setState('error');
       }
     },
     [roomId, setCredentials],
   );
 
-  // Vào phòng: có phiên cũ thì reconnect, chưa có tên thì hỏi tên trước (§23, §36).
+  // Vào sân: có phiên cũ thì ngồi lại chỗ cũ, chưa có tên thì hỏi tên trước (§23, §36).
   useEffect(() => {
     if (!connected || state === 'joining' || state === 'joined') return;
     if (attempted.current === roomId && state === 'error') return;
@@ -84,7 +103,7 @@ export function RoomScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, roomId]);
 
-  // Nối lại sau khi rớt mạng — server giữ ghế nên chỉ cần JOIN_ROOM lại (§36).
+  // Nối lại sau khi rớt mạng — server giữ chỗ nên chỉ cần JOIN_ROOM lại (§36).
   useEffect(() => {
     const socket = getSocket();
     const onConnect = () => {
@@ -100,13 +119,13 @@ export function RoomScreen() {
 
   useEffect(() => {
     if (kicked) {
-      pushToast('error', kicked);
+      baoTin('error', kicked);
       reset();
       navigate('/');
     }
-  }, [kicked, navigate, pushToast, reset]);
+  }, [kicked, navigate, baoTin, reset]);
 
-  const leave = () => {
+  const veNha = () => {
     getSocket().emit('LEAVE_ROOM');
     setCredentials(null);
     reset();
@@ -120,76 +139,100 @@ export function RoomScreen() {
 
   const act = useCallback(
     (event: string, payload?: unknown) => {
-      emitAck(event, payload).catch((e: Error) => pushToast('error', e.message));
+      emitAck(event, payload).catch((e: Error) => baoTin('error', e.message));
     },
-    [pushToast],
+    [baoTin],
   );
+
+  // Ve sầu rung màn hình khi sắp hết giờ đoán — VFX §10.
+  const conLai = useCountdown(room?.phaseEndsAt ?? null, false);
+  const veKeu = room?.phase === GamePhase.GUESS_TOTAL && conLai !== null && conLai <= 5;
+
+  // Bị loại: một tiếng chuông chùa xa, rất nhẹ (§12), rồi cánh cửa gỗ khép lại.
+  const biLoai = me?.eliminated ?? false;
+  useEffect(() => {
+    if (biLoai) sfx.biLoai();
+    else setDaBaoLoai(false);
+  }, [biLoai]);
 
   if (state === 'need-name') {
     return (
-      <main className="home">
-        <div className="home__hero">
-          <h1>TỔNG BI</h1>
-          <p>
-            Bạn được mời vào phòng <b>{roomId}</b>
+      <main className="san man-p02" data-gio="8h">
+        <LaTreRoi />
+        <header className="mai">
+          <h1 className="hieu" data-chu="TỔNG BI">
+            TỔNG BI
+          </h1>
+          <p className="phu">
+            Có đứa rủ bạn vào sân <b className="so">{roomId}</b>
           </p>
-        </div>
-        <div className="card">
-          <div className="field">
-            <label htmlFor="jname">Tên của bạn</label>
-            <input
-              id="jname"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Nhập tên…"
-              maxLength={16}
-            />
-          </div>
-          <div className="field">
-            <label>Avatar</label>
-            <div className="avatars">
-              {AVATARS.map((a) => (
-                <button
-                  key={a}
-                  className={`avatar${a === avatar ? ' avatar--on' : ''}`}
-                  onClick={() => setAvatar(a)}
-                >
-                  {a}
-                </button>
-              ))}
+        </header>
+        <div className="san-trong">
+          <GiayDo ghim>
+            <div className="o-nhap">
+              <label className="nhan" htmlFor="ten">
+                tụi nó gọi bạn là gì?
+              </label>
+              <label className="nan">
+                <input
+                  id="ten"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="gõ tên vào đây…"
+                  maxLength={16}
+                />
+              </label>
             </div>
-          </div>
-          <Button
-            full
-            disabled={!name.trim() || !connected}
-            onClick={() => {
-              saveProfile({ name: name.trim(), avatar });
-              attempted.current = roomId;
-              void join(name.trim(), avatar, null);
-            }}
-          >
-            Vào phòng
-          </Button>
+            <div className="o-nhap">
+              <span className="nhan">chọn cái mặt</span>
+              <div className="chon-non">
+                {AVATARS.map((a) => (
+                  <button
+                    key={a}
+                    onClick={() => setAvatar(a)}
+                    aria-label={`Chọn mặt ${a}`}
+                    aria-pressed={a === avatar}
+                  >
+                    <Non avatar={a} chon={a === avatar} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Nut
+              vat="la"
+              co="lg"
+              rong
+              disabled={!name.trim() || !connected}
+              onClick={() => {
+                saveProfile({ name: name.trim(), avatar });
+                attempted.current = roomId;
+                void join(name.trim(), avatar, null);
+              }}
+            >
+              Ngồi xuống sân
+            </Nut>
+          </GiayDo>
         </div>
       </main>
     );
   }
 
   if (state === 'error') {
-    const full = errorCode === 'ROOM_FULL';
+    const chat = maLoi === 'ROOM_FULL';
     return (
-      <main className="home">
-        <div className="card center">
-          <div className="panel__title">{full ? 'Phòng đã đầy' : 'Không vào được phòng'}</div>
-          <p className="panel__hint">{error}</p>
-          {full && (
-            <p className="panel__note">
-              Nhờ chủ phòng mở thêm một phòng nữa rồi gửi link mới nhé.
-            </p>
-          )}
-          <Button full onClick={() => navigate('/')}>
-            Về trang chủ
-          </Button>
+      <main className="san man-p02" data-gio="17h">
+        <LaTreRoi />
+        <div className="san-trong co-dau giua-doc">
+          <GiayDo ghim className="canh-giua">
+            <h2 className="tua">{chat ? 'Sân chật rồi' : 'Không vào sân được'}</h2>
+            <p className="moi">{loi}</p>
+            {chat && (
+              <p className="ghi-chu">Bảo chủ trò vạch thêm một sân nữa rồi gửi link mới nhé.</p>
+            )}
+            <Nut co="lg" rong onClick={() => navigate('/')}>
+              Về đầu ngõ
+            </Nut>
+          </GiayDo>
         </div>
       </main>
     );
@@ -197,9 +240,14 @@ export function RoomScreen() {
 
   if (!room || !me) {
     return (
-      <main className="home center">
-        <div className="loader" />
-        <p className="home__status">{connected ? 'Đang vào phòng…' : 'Đang kết nối…'}</p>
+      <main className="san man-p02" data-gio="8h">
+        <LaTreRoi />
+        <div className="san-trong co-dau giua-doc canh-giua">
+          <BuiDoi />
+          <p>
+            <span className="loi-nhac">{connected ? 'Đang chạy ra sân…' : 'Đang tìm đường ra sân…'}</span>
+          </p>
+        </div>
       </main>
     );
   }
@@ -216,21 +264,24 @@ export function RoomScreen() {
         onSetTeam={(teamId) => act('SET_TEAM', { teamId })}
         onKick={(playerId) => act('KICK_PLAYER', { playerId })}
         onSetPenalties={(penalties: Penalty[]) => act('SET_PENALTIES', { penalties })}
-        onLeave={leave}
+        onLeave={veNha}
       />
     );
   }
 
-  const myTeam = room.teams.find((t) => t.id === me.teamId);
-  const teammates = room.players.filter((p) => p.teamId === me.teamId);
-  const activePlayers = room.players.filter((p) => !p.eliminated && p.marbleCount > 0);
-  const myGuess = room.guesses.find((g) => g.teamId === me.teamId);
-  const lockedTeams = room.guesses.filter((g) => g.locked).length;
-  const roller = room.players.find((p) => p.id === room.pendingDicePlayerId);
+  const pheMinh = room.teams.find((t) => t.id === me.teamId);
+  const cungPhe = room.players.filter((p) => p.teamId === me.teamId);
+  const dangChoi = room.players.filter((p) => !p.eliminated && p.marbleCount > 0);
+  const doanCuaMinh = room.guesses.find((g) => g.teamId === me.teamId);
+  const soPheDaChot = room.guesses.filter((g) => g.locked).length;
+  const nguoiTung = room.players.find((p) => p.id === room.pendingDicePlayerId);
+
+  // Bị loại thì trời đã xế chiều với riêng mình (§2 — ELIMINATED 17h).
+  const gio = me.eliminated ? '17h' : (GIO_THEO_PHASE[room.phase] ?? '10h');
 
   return (
-    <main className="game">
-      <div className="game__scene">
+    <main className={`san-choi${veKeu ? ' ve-keu' : ''}`} data-gio={gio}>
+      <div className="canh">
         <Scene
           room={room}
           localPlayerId={me.id}
@@ -241,22 +292,45 @@ export function RoomScreen() {
         />
       </div>
 
+      {/* Nhịp ánh sáng của phase — một lớp tint duy nhất phủ lên cảnh. */}
+      <div className="nang" aria-hidden />
+      {/* Một tia nắng xuyên khe mái tranh rọi vào nắm tay đang mở (§10). */}
+      {room.phase === GamePhase.REVEAL && <div className="tia-nang" aria-hidden />}
+
       <Hud room={room} me={me} connected={connected} />
 
-      <div className="game__panel">
+      {biLoai && !daBaoLoai && (
+        <CanhCua onDong={() => setDaBaoLoai(true)}>
+          <GiayDo ghim className="canh-giua">
+            <h2 className="tua">Sạch túi rồi</h2>
+            <p className="moi">
+              Ngồi bên vệ sân xem tụi nó chơi nốt buổi chiều. Ván sau lại có bi.
+            </p>
+            <Nut co="lg" onClick={() => setDaBaoLoai(true)}>
+              Ngồi xem
+            </Nut>
+          </GiayDo>
+        </CanhCua>
+      )}
+
+      <div className="tay-cam">
         {room.phase === GamePhase.ROUND_START && (
-          <div className="panel panel--calm center">
-            <div className="panel__title">Vòng {room.round}</div>
-            <p className="panel__hint">Chuẩn bị chọn bi…</p>
-          </div>
+          <Met className="met-tin dan-len">
+            <div className="baloo" style={{ fontSize: 26 }}>
+              Vòng {room.round}
+            </div>
+            <p className="nhac">ngồi xuống, sắp chia bi</p>
+          </Met>
         )}
 
         {room.phase === GamePhase.SELECT_MARBLES &&
           (me.eliminated || me.marbleCount <= 0 ? (
-            <div className="panel panel--calm center">
-              <div className="panel__title">Bạn đang ngồi ngoài</div>
-              <p className="panel__hint">Xem mọi người chơi hết vòng này nhé.</p>
-            </div>
+            <Met className="met-tin dan-len">
+              <div className="baloo" style={{ fontSize: 21 }}>
+                Bạn đang ngồi ngoài
+              </div>
+              <p className="nhac">xem tụi nó chơi nốt vòng này</p>
+            </Met>
           ) : (
             <MarblePicker
               me={me}
@@ -268,38 +342,44 @@ export function RoomScreen() {
           ))}
 
         {room.phase === GamePhase.CLOSE_HAND && (
-          <div className="panel panel--calm center">
-            <div className="panel__title">Tất cả đã giấu bi ✊</div>
-            <p className="panel__hint">Chuẩn bị đoán tổng…</p>
-          </div>
+          <Met className="met-tin dan-len">
+            <div className="baloo" style={{ fontSize: 21 }}>
+              Cả bọn giấu bi xong ✊
+            </div>
+            <p className="nhac">nín thở, sắp đoán</p>
+          </Met>
         )}
 
         {room.phase === GamePhase.GUESS_TOTAL &&
-          (myGuess ? (
+          (doanCuaMinh ? (
             <GuessPanel
               me={me}
-              myTeam={myTeam}
-              teammates={teammates}
-              activePlayers={activePlayers}
+              myTeam={pheMinh}
+              teammates={cungPhe}
+              activePlayers={dangChoi}
               settings={room.settings}
-              locked={myGuess.locked}
+              locked={doanCuaMinh.locked}
               teamPending={priv?.teamPending ?? null}
-              lockedTeams={lockedTeams}
+              lockedTeams={soPheDaChot}
               totalTeams={room.guesses.length}
               onChange={(v) => getSocket().emit('SET_GUESS', { value: v })}
               onLock={(v) => act('LOCK_GUESS', { value: v })}
             />
           ) : (
-            <div className="panel panel--calm center">
-              <div className="panel__title">Đội bạn không tham gia lượt này</div>
-            </div>
+            <Met className="met-tin dan-len">
+              <div className="baloo" style={{ fontSize: 21 }}>
+                Phe bạn ngồi ngoài lượt này
+              </div>
+            </Met>
           ))}
 
         {room.phase === GamePhase.REVEAL && (
-          <div className="panel panel--calm center">
-            <div className="panel__title">Mở tay! 🤲</div>
-            <p className="panel__hint">Đếm xem tổng là bao nhiêu…</p>
-          </div>
+          <Met className="met-tin dan-len">
+            <div className="baloo" style={{ fontSize: 26 }}>
+              Mở tay!
+            </div>
+            <p className="nhac">đếm xem được mấy viên…</p>
+          </Met>
         )}
 
         {room.phase === GamePhase.ROUND_RESULT && room.lastResult && (
@@ -313,8 +393,8 @@ export function RoomScreen() {
 
         {room.phase === GamePhase.DICE_ROLL && (
           <DicePanel
-            roller={roller}
-            isMe={roller?.id === me.id}
+            roller={nguoiTung}
+            isMe={nguoiTung?.id === me.id}
             outcome={diceCue?.outcome ?? room.lastDice}
             onRoll={() => act('ROLL_DICE')}
             onForfeit={() => act('FORFEIT')}
@@ -327,7 +407,7 @@ export function RoomScreen() {
             myId={me.id}
             isHost={me.isHost}
             onPlayAgain={() => act('PLAY_AGAIN')}
-            onLeave={leave}
+            onLeave={veNha}
           />
         )}
       </div>

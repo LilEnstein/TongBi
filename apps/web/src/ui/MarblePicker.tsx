@@ -1,10 +1,10 @@
 /**
- * Chọn số bi bỏ vào tay — design doc §3 State 2 (Cách B: bộ chọn số + animation).
- * Nút to, đọc rõ trên điện thoại, và không lộ lựa chọn cho người khác.
+ * P06 — Bỏ vào tay mấy viên. Art direction §7 (giấy dó, thẻ tre, túi bi),
+ * §15 (nút chính nằm nửa dưới màn hình, vùng chạm 56px).
  */
 import { useEffect, useState } from 'react';
 import { maxAllowedBet, type GameSettings, type Player } from '@tongbi/game-rules';
-import { Button } from './common.js';
+import { GiayDo, Nut, TuiBi } from './common.js';
 import { sfx, unlockAudio } from '../audio/sfx.js';
 
 interface Props {
@@ -17,67 +17,66 @@ interface Props {
 
 export function MarblePicker({ me, settings, submitted, mySelection, onSubmit }: Props) {
   const max = maxAllowedBet(me, settings);
-  const [value, setValue] = useState(() => Math.min(3, Math.max(1, max)));
+  const [so, setSo] = useState(() => Math.min(3, Math.max(1, max)));
 
   useEffect(() => {
-    setValue((v) => Math.min(Math.max(1, v), Math.max(1, max)));
+    setSo((v) => Math.min(Math.max(1, v), Math.max(1, max)));
   }, [max]);
 
   if (submitted) {
     return (
-      <div className="panel panel--calm">
-        <div className="panel__title">Đã giấu bi 🤫</div>
-        <p className="panel__hint">
-          Bạn đã bỏ <b>{mySelection ?? '?'}</b> viên vào tay. Chờ mọi người cùng nắm tay lại…
+      <GiayDo className="canh-giua dan-len">
+        <h2 className="tua">Giấu xong rồi 🤫</h2>
+        <p className="moi">
+          Trong tay bạn có <b className="so">{mySelection ?? '?'}</b> viên. Chờ tụi nó nắm tay
+          nốt đã.
         </p>
-      </div>
+      </GiayDo>
     );
   }
 
-  const set = (n: number) => {
-    const next = Math.min(max, Math.max(1, n));
-    if (next !== value) {
+  const dat = (n: number) => {
+    const moi = Math.min(max, Math.max(1, n));
+    if (moi !== so) {
       unlockAudio();
-      sfx.marbleClick();
+      sfx.bi();
     }
-    setValue(next);
+    setSo(moi);
   };
 
   return (
-    <div className="panel">
-      <div className="panel__title">Chọn số bi bỏ vào tay</div>
-      <p className="panel__hint">
-        Bạn có <b>{me.marbleCount}</b> viên. Không ai thấy được lựa chọn của bạn.
-      </p>
+    <GiayDo ghim className="dan-len">
+      <h2 className="tua">Bỏ vào tay mấy viên?</h2>
+      <p className="moi">Không đứa nào thấy được đâu, cứ giấu thoải mái.</p>
 
-      <div className="stepper">
-        <button className="stepper__btn" onClick={() => set(value - 1)} disabled={value <= 1} aria-label="Bớt một viên">
+      <div className="dem">
+        <Nut onClick={() => dat(so - 1)} disabled={so <= 1} nhan="Bớt một viên">
           −
-        </button>
-        <div className="stepper__value">
-          <span>{value}</span>
-          <small>/ {max}</small>
-        </div>
-        <button className="stepper__btn" onClick={() => set(value + 1)} disabled={value >= max} aria-label="Thêm một viên">
+        </Nut>
+        <span className="dem-so so">
+          {so}
+          <small>trên {max} viên</small>
+        </span>
+        <Nut onClick={() => dat(so + 1)} disabled={so >= max} nhan="Thêm một viên">
           +
-        </button>
+        </Nut>
       </div>
 
-      <div className="marble-row" role="group" aria-label="Chọn nhanh số bi">
-        {Array.from({ length: Math.min(max, 10) }, (_, i) => i + 1).map((n) => (
-          <button
-            key={n}
-            className={`marble-chip${n === value ? ' marble-chip--on' : ''}`}
-            onClick={() => set(n)}
-          >
-            {n}
-          </button>
+      <div className="hang-bi" aria-hidden>
+        {Array.from({ length: Math.min(so, 20) }, (_, i) => (
+          <i key={i} className={`bi${i % 3 === 1 ? ' x2' : i % 3 === 2 ? ' x3' : ''}`} />
         ))}
       </div>
 
-      <Button full onClick={() => onSubmit(value)}>
-        Nắm tay lại ✊
-      </Button>
-    </div>
+      <hr className="tach" />
+
+      <div className="hang" style={{ justifyContent: 'space-between' }}>
+        <TuiBi so={me.marbleCount} tong={settings.startingMarbles} />
+        <Nut vat="la" co="lg" onClick={() => onSubmit(so)}>
+          Nắm tay lại ✊
+        </Nut>
+      </div>
+      <p className="ghi-chu">Còn {me.marbleCount} viên trong túi.</p>
+    </GiayDo>
   );
 }

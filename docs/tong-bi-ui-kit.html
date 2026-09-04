@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tổng Bi — Bộ giao diện dân gian</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TỔNG BI — hệ giao diện dân gian Việt Nam
+   Mọi thành phần đặt tên theo vật liệu, không theo component chuẩn.
+   ============================================================ */
+
+:root{
+  /* nền tảng */
+  --dat-sang:#D9A768;  --dat:#B9803F;      --dat-toi:#7A4F26;
+  --tranh:#E7C170;     --tranh-toi:#A87C24;
+  --tre:#C79B4E;       --tre-toi:#8E6626;
+  --giay:#F2E5C4;      --muc:#2A211B;      --phan:#F6F1E4;
+  --bac:#A99070;       /* đất bạc màu — trạng thái tắt */
+
+  /* đội & ngữ nghĩa */
+  --cham:#1F3F63; --dieu:#C4322A; --la:#4C7A38; --nghe:#E8A72E;
+
+  /* nhịp */
+  --nhip: 8px;
+  --nay: cubic-bezier(.34,1.56,.64,1);
+  --truot: cubic-bezier(.4,0,.2,1);
+
+  /* hạt nền */
+  --hat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='0.2'/%3E%3C/svg%3E");
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:"Be Vietnam Pro",system-ui,sans-serif;
+  font-size:17px; line-height:1.65; color:var(--muc);
+  background-color:var(--dat);
+  background-image:
+    var(--hat),
+    radial-gradient(120% 80% at 50% 0%, var(--dat-sang) 0%, var(--dat) 45%, var(--dat-toi) 100%);
+}
+
+h1,h2,h3,.baloo{font-family:"Baloo 2","Be Vietnam Pro",cursive;font-weight:800;line-height:1.15;margin:0}
+p{margin:0 0 1em}
+.so{font-variant-numeric:tabular-nums}
+
+:focus-visible{outline:3px solid var(--nghe);outline-offset:3px;border-radius:4px}
+
+/* ---------- mái tranh: header ---------- */
+.mai{position:relative;padding:44px 24px 60px;text-align:center;
+  background:repeating-linear-gradient(96deg,
+    var(--tranh-toi) 0 2px, var(--tranh) 2px 6px, #F0D394 6px 9px, var(--tranh) 9px 13px);
+  border-bottom:3px solid var(--muc)}
+.mai::after{content:"";position:absolute;left:0;right:0;bottom:-26px;height:28px;background:inherit;
+  -webkit-mask-image:repeating-linear-gradient(90deg,#000 0 4px,transparent 4px 9px),
+    linear-gradient(#000 0 0);
+  -webkit-mask-size:100% 100%,100% 14px;
+  -webkit-mask-position:top,top;
+  -webkit-mask-repeat:repeat-x;
+  mask-image:repeating-linear-gradient(90deg,#000 0 4px,transparent 4px 9px);
+  mask-repeat:repeat-x}
+
+.hieu{position:relative;display:inline-block;font-size:64px;letter-spacing:.02em;color:var(--dieu)}
+.hieu::before{content:attr(data-chu);position:absolute;inset:0;-webkit-text-stroke:9px var(--muc);
+  color:var(--muc);z-index:-1}
+.mai .phu{font-size:17px;font-weight:500;color:var(--muc);opacity:.75;margin:6px 0 0}
+
+/* ---------- bố cục ---------- */
+.san{max-width:1080px;margin:0 auto;padding:56px 20px 96px}
+.doan{margin-bottom:64px}
+.doan > h2{font-size:33px;margin-bottom:4px}
+.doan > .dan{max-width:62ch;font-size:17px;opacity:.85;margin-bottom:22px}
+.hang{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.luoi{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+
+/* ---------- giấy dó: mặt nền chứa chữ ---------- */
+.giay-do{position:relative;background:var(--giay);color:var(--muc);padding:22px 24px;
+  clip-path:polygon(0.6% 2%,20% 0.4%,48% 1.6%,79% 0%,99.4% 2.4%,100% 26%,99.2% 61%,100% 88%,
+    97% 99.4%,71% 98.4%,42% 100%,17% 98.6%,1% 99.2%,0.2% 72%,1.2% 38%,0% 15%);
+  background-image:var(--hat);background-blend-mode:multiply}
+.giay-do::after{content:"";position:absolute;inset:5px;border:3px solid var(--muc);
+  filter:url(#nham);pointer-events:none;opacity:.9}
+.giay-do > *:last-child{margin-bottom:0}
+
+/* ghim tre ở góc */
+.ghim::before,.ghim::after{content:"";position:absolute;width:16px;height:7px;background:var(--tre);
+  border:2px solid var(--muc);top:9px;transform:rotate(-18deg)}
+.ghim::before{left:12px}
+.ghim::after{right:12px;transform:rotate(18deg)}
+
+/* ---------- mẹt tre: vùng tròn trung tâm ---------- */
+.met{position:relative;aspect-ratio:1;border-radius:50%;
+  background:
+    repeating-conic-gradient(from 0deg, var(--tre) 0deg 4deg, #D8AF66 4deg 8deg),
+    var(--tre);
+  border:9px solid var(--tre-toi);box-shadow:0 6px 0 var(--dat-toi);
+  display:grid;place-content:center;text-align:center;padding:24px}
+.met::after{content:"";position:absolute;inset:-6px;border:3px solid var(--muc);border-radius:50%;
+  filter:url(#nham);pointer-events:none}
+
+/* ---------- chiếu cói: danh sách ---------- */
+.chieu{background:repeating-linear-gradient(0deg,#E3C98E 0 5px,#D6B872 5px 10px);
+  border:4px solid var(--dat-toi);padding:6px}
+.chieu li{list-style:none;display:flex;align-items:center;gap:12px;padding:10px 12px;
+  border-bottom:2px dashed rgba(42,33,27,.28)}
+.chieu li:last-child{border-bottom:0}
+.chieu ul{margin:0;padding:0}
+
+/* ---------- liếp tre: thanh HUD ---------- */
+.liep{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 16px;
+  background:repeating-linear-gradient(90deg,var(--tre) 0 26px,var(--tre-toi) 26px 30px);
+  border-top:3px solid var(--muc);border-bottom:3px solid var(--muc)}
+
+/* ---------- nút ---------- */
+.nut{position:relative;font-family:"Baloo 2",cursive;font-weight:700;font-size:17px;
+  height:48px;padding:0 22px;border:0;border-radius:10px;cursor:pointer;color:var(--muc);
+  background:var(--tre);
+  background-image:repeating-linear-gradient(90deg,rgba(142,102,38,.16) 0 1px,transparent 1px 7px);
+  box-shadow:0 4px 0 var(--tre-toi);
+  transition:transform .12s var(--nay), box-shadow .12s var(--nay), filter .15s}
+.nut::after{content:"";position:absolute;inset:-3px;border:3px solid var(--muc);border-radius:12px;
+  filter:url(#nham);pointer-events:none}
+.nut:hover{filter:brightness(1.05);transform:rotate(-.6deg)}
+.nut:active{transform:translateY(4px);box-shadow:0 0 0 var(--tre-toi)}
+.nut.lg{height:56px;font-size:21px;padding:0 30px;box-shadow:0 5px 0 var(--tre-toi)}
+.nut.sm{height:38px;font-size:15px;padding:0 14px;box-shadow:0 3px 0 var(--tre-toi)}
+.nut[disabled]{background:var(--bac);background-image:none;box-shadow:none;opacity:.62;
+  cursor:not-allowed;transform:none;filter:none}
+.nut[disabled]::after{opacity:.5}
+
+.la-chuoi{background:var(--la);color:var(--phan);
+  background-image:repeating-linear-gradient(74deg,rgba(0,0,0,.14) 0 1px,transparent 1px 9px);
+  box-shadow:0 4px 0 #335624}
+.la-chuoi.lg{box-shadow:0 5px 0 #335624}
+.la-chuoi:active{box-shadow:0 0 0 #335624}
+
+.gach{background:var(--dieu);color:var(--phan);border-radius:3px;box-shadow:0 4px 0 #8A2019;
+  background-image:var(--hat);background-blend-mode:multiply}
+.gach::after{border-radius:4px}
+.gach:active{box-shadow:0 0 0 #8A2019}
+
+.mo-cau{background:transparent;box-shadow:none;color:var(--muc)}
+.mo-cau::after{border-style:dashed}
+.mo-cau:active{transform:translateY(2px)}
+
+/* trống ếch — nút bắt đầu của chủ phòng */
+.trong{width:132px;height:132px;border-radius:50%;font-size:24px;
+  background:radial-gradient(circle at 50% 42%, #E9CB8E 0 46%, var(--dieu) 46% 100%);
+  border:0;box-shadow:0 7px 0 #7E1C15;color:var(--phan);font-family:"Baloo 2",cursive;
+  font-weight:800;cursor:pointer;position:relative;
+  transition:transform .1s var(--nay),box-shadow .1s var(--nay)}
+.trong::after{content:"";position:absolute;inset:-4px;border:4px solid var(--muc);border-radius:50%;
+  filter:url(#nham)}
+.trong:active{transform:translateY(6px) scale(.97);box-shadow:0 1px 0 #7E1C15}
+
+/* ---------- khung nan tre: ô nhập ---------- */
+.nan{position:relative;display:inline-flex;align-items:center;background:var(--giay);
+  padding:12px 16px;border:0}
+.nan::after{content:"";position:absolute;inset:0;border:3px solid var(--tre-toi);filter:url(#nham);
+  pointer-events:none}
+.nan input{border:0;background:transparent;font-family:"Baloo 2",cursive;font-weight:700;
+  font-size:26px;letter-spacing:.22em;width:100%;color:var(--muc);outline:none}
+.nan input::placeholder{color:rgba(42,33,27,.32)}
+.nhan{display:block;font-size:15px;font-weight:600;margin-bottom:7px;opacity:.8}
+
+/* bộ đếm bi */
+.dem{display:flex;align-items:center;gap:16px}
+.dem-so{font-family:"Baloo 2",cursive;font-weight:800;font-size:64px;min-width:86px;
+  text-align:center;color:var(--muc)}
+.dem .nut{width:52px;height:52px;padding:0;font-size:26px;border-radius:50%}
+.dem .nut::after{border-radius:50%}
+
+/* ---------- nón lá: khung avatar ---------- */
+.non{position:relative;width:74px;height:74px;border-radius:50%;flex:0 0 auto;
+  background:repeating-radial-gradient(circle at 50% 50%, #E9D49B 0 3px, #D9BE7C 3px 7px);
+  border:4px solid var(--tre-toi);display:grid;place-content:center;font-size:30px}
+.non::after{content:"";position:absolute;inset:-4px;border:3px solid var(--muc);border-radius:50%;
+  filter:url(#nham)}
+.non .chop{position:absolute;top:50%;left:50%;width:13px;height:13px;margin:-6px 0 0 -6px;
+  border-radius:50%;border:3px solid var(--muc)}
+.non.d-cham .chop{background:var(--cham)}
+.non.d-dieu .chop{background:var(--dieu)}
+.non.d-la   .chop{background:var(--la)}
+.non.d-nghe .chop{background:var(--nghe)}
+
+/* khăn đội */
+.khan{display:inline-block;font-size:15px;font-weight:600;color:var(--phan);padding:3px 13px;
+  border:2px solid var(--muc);clip-path:polygon(0 0,100% 0,96% 100%,4% 100%)}
+.khan.d-cham{background:var(--cham)} .khan.d-dieu{background:var(--dieu)}
+.khan.d-la{background:var(--la)}     .khan.d-nghe{background:var(--nghe);color:var(--muc)}
+
+/* ---------- túi bi ---------- */
+.tui{position:relative;width:64px;height:70px;flex:0 0 auto;
+  background:#8B6A46;background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.12) 0 1px,transparent 1px 4px);
+  border:3px solid var(--muc);border-radius:40% 40% 50% 50%/24% 24% 60% 60%}
+.tui::before{content:"";position:absolute;top:-7px;left:12px;right:12px;height:12px;
+  background:#6F5233;border:3px solid var(--muc);border-radius:4px}
+.tui.voi{height:52px;border-radius:40% 40% 50% 50%/30% 30% 46% 46%}
+.tui.het{height:34px;background:#7A5C3C;border-radius:6px 6px 30% 30%/6px 6px 40% 40%}
+.tui-so{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-family:"Baloo 2",cursive;
+  font-weight:800;font-size:22px;color:var(--phan)}
+
+/* ---------- nén hương: đồng hồ ---------- */
+.huong{position:relative;height:16px;background:#C9A66B;border:3px solid var(--muc);
+  border-radius:8px;overflow:visible}
+.huong .tro{position:absolute;inset:0 auto 0 0;width:var(--chay,38%);background:#6E6660;
+  border-radius:5px 0 0 5px}
+.huong .than{position:absolute;top:50%;left:var(--chay,38%);width:14px;height:14px;margin:-7px 0 0 -7px;
+  border-radius:50%;background:radial-gradient(circle,#FFD98A 0 30%,var(--dieu) 32% 100%);
+  box-shadow:0 0 10px 2px rgba(196,50,42,.55)}
+.huong .khoi{position:absolute;bottom:16px;left:var(--chay,38%);width:3px;height:26px;
+  background:linear-gradient(to top,rgba(180,170,160,.7),transparent);
+  transform-origin:bottom center;animation:khoi 3.6s ease-in-out infinite}
+@keyframes khoi{0%,100%{transform:rotate(-7deg) scaleY(1)}50%{transform:rotate(9deg) scaleY(1.25)}}
+
+/* ---------- vạch trên đất: bảng điểm ---------- */
+.vach{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
+.bo-vach{position:relative;width:46px;height:38px}
+.bo-vach i{position:absolute;bottom:0;width:4px;height:34px;background:var(--phan);border-radius:2px;
+  box-shadow:0 0 3px rgba(255,255,255,.35)}
+.bo-vach i:nth-child(1){left:2px}  .bo-vach i:nth-child(2){left:12px}
+.bo-vach i:nth-child(3){left:22px} .bo-vach i:nth-child(4){left:32px}
+.bo-vach i:nth-child(5){left:1px;width:46px;height:4px;bottom:17px;transform:rotate(-19deg)}
+
+/* ---------- xúc xắc gỗ ---------- */
+.mat-xx{position:relative;width:88px;height:88px;background:#C08E52;border:3px solid var(--muc);
+  border-radius:12px;display:grid;place-content:center;
+  background-image:repeating-linear-gradient(87deg,rgba(90,60,25,.16) 0 1px,transparent 1px 8px)}
+.mat-xx .cham-bi{display:grid;grid-template-columns:repeat(3,12px);gap:5px}
+.mat-xx .cham-bi span{width:12px;height:12px;border-radius:50%;background:var(--muc);opacity:.82}
+.mat-xx .ten{position:absolute;bottom:-24px;left:0;right:0;text-align:center;font-size:13px;
+  font-weight:600;color:var(--phan)}
+
+/* ---------- lá chuối cuốn: toast ---------- */
+.la-cuon{position:fixed;left:50%;top:22px;transform:translateX(-50%) translateY(-140%);
+  background:var(--la);color:var(--phan);font-weight:600;padding:13px 26px;z-index:60;
+  border:3px solid var(--muc);border-radius:26px 8px 26px 8px;
+  transition:transform .42s var(--nay)}
+.la-cuon.hien{transform:translateX(-50%) translateY(0)}
+
+/* ---------- cánh cửa gỗ: modal ---------- */
+.rem{position:fixed;inset:0;background:rgba(42,33,27,.62);display:none;place-content:center;
+  z-index:50;padding:20px}
+.rem.hien{display:grid}
+.cua{width:min(440px,100%);background:#A9793F;border:4px solid var(--muc);padding:8px;
+  background-image:repeating-linear-gradient(90deg,rgba(60,38,14,.2) 0 2px,transparent 2px 20px);
+  animation:mocua .34s var(--nay)}
+@keyframes mocua{from{transform:scale(.9) rotate(-1.5deg);opacity:0}to{transform:none;opacity:1}}
+.cua .then{height:12px;background:var(--tre);border:3px solid var(--muc);border-radius:6px;
+  margin:0 auto 8px;width:64%}
+
+/* ---------- vùng an toàn cho ảnh nền Gemini ---------- */
+.nen-page{position:relative;background-size:cover;background-position:center;
+  background-color:var(--dat);background-image:var(--hat),
+    linear-gradient(180deg,var(--tranh-toi) 0 9%,var(--dat-sang) 9% 34%,var(--dat) 100%)}
+.an-toan::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,transparent 0 16%,rgba(122,79,38,.30) 30%,
+    rgba(122,79,38,.30) 74%,transparent 88%)}
+
+/* ---------- máy điện thoại (khung xem thử) ---------- */
+.dt{width:300px;aspect-ratio:9/17;border:5px solid var(--muc);border-radius:26px;overflow:hidden;
+  display:flex;flex-direction:column;box-shadow:0 8px 0 var(--dat-toi);flex:0 0 auto}
+.dt .than-mh{flex:1;position:relative;display:flex;flex-direction:column;padding:14px;gap:12px}
+.dt .ten-mh{font-size:13px;font-weight:600;color:var(--phan);opacity:.9;text-align:center;
+  padding:6px;background:rgba(42,33,27,.45)}
+.giua{margin-top:auto;margin-bottom:auto}
+
+/* ---------- lặt vặt ---------- */
+.o-mau{padding:14px;border:3px solid var(--muc);color:var(--phan);font-size:13px;font-weight:600;
+  min-height:82px;display:flex;flex-direction:column;justify-content:flex-end}
+.o-mau code{display:block;font-size:12px;opacity:.85;font-family:"Be Vietnam Pro",monospace}
+.bi{width:26px;height:26px;border-radius:50%;flex:0 0 auto;border:2px solid var(--muc);
+  background:radial-gradient(circle at 34% 30%,#fff 0 12%,transparent 13%),
+    conic-gradient(from 40deg,var(--cham) 0 25%,var(--giay) 25% 50%,var(--dieu) 50% 75%,var(--giay) 75%)}
+.dan-nho{font-size:15px;opacity:.78;margin-top:8px}
+.chu-dat{color:var(--phan);text-shadow:0 1px 0 rgba(42,33,27,.45)}
+hr.tach{border:0;border-top:3px dashed rgba(42,33,27,.3);margin:34px 0}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:.12s!important}
+}
+@media (max-width:600px){
+  .hieu{font-size:44px}
+  .doan > h2{font-size:26px}
+  .san{padding:36px 16px 64px}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <filter id="nham" x="-12%" y="-12%" width="124%" height="124%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<header class="mai">
+  <h1 class="hieu" data-chu="TỔNG BI">TỔNG BI</h1>
+  <p class="phu">Bộ giao diện dân gian — nền đất, mái tranh, tay trẻ con</p>
+</header>
+
+<main class="san">
+
+  <!-- ═══ MÀU ═══ -->
+  <section class="doan">
+    <h2>Màu lấy từ vật liệu</h2>
+    <p class="dan chu-dat">Không có màu nào được chọn từ lý thuyết màu. Mỗi màu là một thứ sờ được ngoài sân: đất phơi nắng, rơm trên mái, giấy dó dán vách, mực nho trong nghiên.</p>
+    <div class="luoi">
+      <div class="o-mau" style="background:#B9803F">Đất nện<code>--dat · #B9803F</code></div>
+      <div class="o-mau" style="background:#D9A768;color:#2A211B">Đất phơi nắng<code>--dat-sang · #D9A768</code></div>
+      <div class="o-mau" style="background:#7A4F26">Đất trong bóng râm<code>--dat-toi · #7A4F26</code></div>
+      <div class="o-mau" style="background:#E7C170;color:#2A211B">Rơm rạ<code>--tranh · #E7C170</code></div>
+      <div class="o-mau" style="background:#C79B4E;color:#2A211B">Nan tre<code>--tre · #C79B4E</code></div>
+      <div class="o-mau" style="background:#F2E5C4;color:#2A211B">Giấy dó<code>--giay · #F2E5C4</code></div>
+      <div class="o-mau" style="background:#2A211B">Mực nho<code>--muc · #2A211B</code></div>
+      <div class="o-mau" style="background:#1F3F63">Chàm — đội 1<code>--cham · #1F3F63</code></div>
+      <div class="o-mau" style="background:#C4322A">Đỏ điều — đội 2<code>--dieu · #C4322A</code></div>
+      <div class="o-mau" style="background:#4C7A38">Lá chuối — đội 3<code>--la · #4C7A38</code></div>
+      <div class="o-mau" style="background:#E8A72E;color:#2A211B">Vàng nghệ — đội 4<code>--nghe · #E8A72E</code></div>
+      <div class="o-mau" style="background:#A99070">Đất bạc màu — tắt<code>--bac · #A99070</code></div>
+    </div>
+    <p class="dan-nho chu-dat">Chữ thân không bao giờ nằm trực tiếp trên nền đất — tương phản chỉ đạt 3.2:1. Luôn có giấy dó, lá chuối hoặc mẹt tre phía sau.</p>
+  </section>
+
+  <!-- ═══ CHỮ ═══ -->
+  <section class="doan">
+    <h2>Chữ</h2>
+    <div class="giay-do ghim" style="max-width:64ch">
+      <div style="font-family:'Baloo 2';font-weight:800;font-size:64px" class="so">11</div>
+      <p style="font-size:15px;opacity:.7;margin-top:-8px">Baloo 2 · 800 · số bi và tổng</p>
+      <hr class="tach" style="margin:18px 0">
+      <h3 style="font-size:33px">Trúng phóc!</h3>
+      <p style="font-size:15px;opacity:.7;margin-top:2px">Baloo 2 · 800 · tiêu đề màn hình</p>
+      <hr class="tach" style="margin:18px 0">
+      <p>Mỗi người phải đặt ít nhất một viên bi vào lòng bàn tay, không được đặt quá số bi đang có, và phải giấu số bi đó cho tới khi cả vòng cùng mở tay.</p>
+      <p style="font-size:15px;opacity:.7;margin-bottom:0">Be Vietnam Pro · 400 · thân, dòng tối đa 62 ký tự</p>
+    </div>
+    <p class="dan-nho chu-dat">Kiểm tra dấu ở weight 800, cỡ 12px trước khi chốt font: ẫ ậ ặ ề ễ ộ ợ ữ ự</p>
+  </section>
+
+  <!-- ═══ NÚT ═══ -->
+  <section class="doan">
+    <h2>Nút</h2>
+    <p class="dan chu-dat">Bóng là khối cứng lệch 4px, như bóng của một vật gỗ đặt trên đất giữa trưa — không phải bóng mờ xám. Nhấn xuống thì nút lún xuống và mất bóng.</p>
+
+    <div class="giay-do" style="margin-bottom:18px">
+      <div class="hang">
+        <button class="nut the-tre lg">Chọn bi</button>
+        <button class="nut the-tre">Thẻ tre</button>
+        <button class="nut the-tre sm">Nhỏ</button>
+        <button class="nut la-chuoi lg">Khóa đáp án</button>
+        <button class="nut gach">Rời sân</button>
+        <button class="nut mo-cau">Xem luật</button>
+        <button class="nut" disabled>Chờ tụi nó…</button>
+      </div>
+      <p class="dan-nho" style="margin-bottom:0">Thẻ tre · lá chuối · gạch nung · mo cau · đất bạc màu (tắt)</p>
+    </div>
+
+    <div class="giay-do">
+      <div class="hang" style="align-items:center;gap:26px">
+        <button class="trong">Bắt đầu</button>
+        <div style="max-width:38ch">
+          <h3 style="font-size:21px">Cái trống ếch</h3>
+          <p style="margin-bottom:0">Nút bắt đầu của chủ phòng không phải là một cái nút. Bấm vào nó phát ra tiếng trống, và cả phòng nghe thấy cùng lúc.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ HỘP ═══ -->
+  <section class="doan">
+    <h2>Hộp và khung</h2>
+    <p class="dan chu-dat">Trong repo, đặt tên class theo vật liệu chứ không theo component chuẩn. Không có <code>.card</code>, không có <code>.panel</code> — có mẹt tre, giấy dó, chiếu cói, tấm liếp.</p>
+
+    <div class="luoi" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+      <div>
+        <div class="giay-do ghim">
+          <h3 style="font-size:21px">Giấy dó dán vách</h3>
+          <p style="margin-bottom:0">Mọi vùng chứa chữ. Mép rách xơ, bốn góc ghim bằng nan tre, viền mực có rung.</p>
+        </div>
+        <p class="dan-nho chu-dat"><code>.giay-do.ghim</code></p>
+      </div>
+
+      <div>
+        <div class="met" style="max-width:230px;margin:0 auto">
+          <div class="baloo" style="font-size:26px">Vòng chơi</div>
+          <p style="font-size:15px;margin:4px 0 0">4 người · vòng 3</p>
+        </div>
+        <p class="dan-nho chu-dat" style="text-align:center"><code>.met</code> — khu vực trung tâm</p>
+      </div>
+
+      <div>
+        <div class="chieu">
+          <ul>
+            <li><span class="non d-cham" style="width:44px;height:44px;font-size:20px">🧒<span class="chop"></span></span> <b>Tí</b> <span class="khan d-cham" style="margin-left:auto">Chàm</span></li>
+            <li><span class="non d-dieu" style="width:44px;height:44px;font-size:20px">🧒<span class="chop"></span></span> <b>Sửu</b> <span class="khan d-dieu" style="margin-left:auto">Điều</span></li>
+            <li><span class="non d-la" style="width:44px;height:44px;font-size:20px">🧒<span class="chop"></span></span> <b>Dần</b> <span class="khan d-la" style="margin-left:auto">Lá</span></li>
+          </ul>
+        </div>
+        <p class="dan-nho chu-dat"><code>.chieu</code> — danh sách người chơi</p>
+      </div>
+    </div>
+
+    <div class="liep" style="margin-top:18px">
+      <span class="baloo" style="font-size:17px">Vòng 3 / 8</span>
+      <div class="huong" style="flex:1;max-width:300px;--chay:52%">
+        <div class="tro"></div><div class="khoi"></div><div class="than"></div>
+      </div>
+      <span class="baloo so" style="font-size:17px">Còn 7 bi</span>
+    </div>
+    <p class="dan-nho chu-dat"><code>.liep</code> — thanh HUD, có nén hương làm đồng hồ đếm ngược</p>
+  </section>
+
+  <!-- ═══ ĐIỀU KHIỂN ═══ -->
+  <section class="doan">
+    <h2>Điều khiển</h2>
+    <div class="luoi">
+      <div class="giay-do">
+        <span class="nhan">Mã phòng là gì?</span>
+        <label class="nan" style="width:100%"><input value="AB12CD" maxlength="6" aria-label="Mã phòng"></label>
+        <p class="dan-nho" style="margin-bottom:0">Khung nan tre, chữ Baloo giãn ký tự</p>
+      </div>
+
+      <div class="giay-do">
+        <span class="nhan">Bỏ vào tay mấy viên?</span>
+        <div class="dem">
+          <button class="nut" aria-label="Bớt một viên">−</button>
+          <span class="dem-so so" id="soBi">4</span>
+          <button class="nut" aria-label="Thêm một viên">+</button>
+        </div>
+        <p class="dan-nho" style="margin-bottom:0">Vùng chạm 52px, nằm trong tầm ngón cái</p>
+      </div>
+
+      <div class="giay-do">
+        <span class="nhan">Túi bi</span>
+        <div class="hang" style="align-items:flex-end">
+          <div class="tui"><span class="tui-so so">10</span></div>
+          <div class="tui voi"><span class="tui-so so">4</span></div>
+          <div class="tui het"><span class="tui-so so">0</span></div>
+        </div>
+        <p class="dan-nho" style="margin-bottom:0">Túi xẹp dần theo số bi — đọc được từ xa</p>
+      </div>
+
+      <div class="giay-do">
+        <span class="nhan">Điểm vạch trên đất</span>
+        <div class="vach" style="background:var(--dat-toi);padding:14px;border-radius:6px">
+          <div class="bo-vach"><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="bo-vach"><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="bo-vach"><i></i><i></i></div>
+        </div>
+        <p class="dan-nho" style="margin-bottom:0">12 lượt thắng, đếm bằng que như ngoài sân</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ XÚC XẮC ═══ -->
+  <section class="doan">
+    <h2>Xúc xắc gỗ</h2>
+    <p class="dan chu-dat">Khối gỗ mít cạnh mòn, mặt khắc chìm bôi mực. Ba mặt cho vay bi, ba mặt là thử thách của chủ trò.</p>
+    <div class="giay-do">
+      <div class="hang" style="gap:26px;padding-bottom:16px">
+        <div class="mat-xx"><div class="cham-bi"><span></span><span></span><span></span></div><span class="ten" style="color:var(--muc)">vay 3 bi</span></div>
+        <div class="mat-xx"><div class="cham-bi"><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="ten" style="color:var(--muc)">vay 6 bi</span></div>
+        <div class="mat-xx"><div class="cham-bi"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="ten" style="color:var(--muc)">vay 9 bi</span></div>
+        <div class="mat-xx">
+          <svg width="46" height="40" viewBox="0 0 46 40" fill="none" stroke="#2A211B" stroke-width="3" stroke-linecap="round">
+            <circle cx="34" cy="12" r="5"/><path d="M30 17 L14 26 M14 26 L8 34 M14 26 L22 32 M30 17 L34 27"/>
+          </svg><span class="ten" style="color:var(--muc)">hít đất</span>
+        </div>
+        <div class="mat-xx">
+          <svg width="40" height="42" viewBox="0 0 40 42" fill="none" stroke="#2A211B" stroke-width="3" stroke-linecap="round">
+            <circle cx="20" cy="9" r="5"/><path d="M20 14 v11 M20 25 l-8 12 M20 25 l8 12 M12 19 h16"/>
+          </svg><span class="ten" style="color:var(--muc)">thụt xì dầu</span>
+        </div>
+        <div class="mat-xx">
+          <svg width="46" height="42" viewBox="0 0 46 42" fill="none" stroke="#2A211B" stroke-width="3" stroke-linecap="round">
+            <circle cx="16" cy="12" r="5"/><path d="M16 17 v12 M16 29 l-6 10 M16 29 l6 10"/>
+            <circle cx="31" cy="9" r="4"/><path d="M31 13 v9 M24 19 h13"/>
+          </svg><span class="ten" style="color:var(--muc)">cõng đồng đội</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ MODAL & TOAST ═══ -->
+  <section class="doan">
+    <h2>Cánh cửa gỗ và lá chuối cuốn</h2>
+    <div class="giay-do">
+      <div class="hang">
+        <button class="nut the-tre" onclick="document.getElementById('rem').classList.add('hien')">Mở cánh cửa</button>
+        <button class="nut la-chuoi" onclick="baoTin('Đã sao chép link sân chơi')">Thả lá chuối</button>
+      </div>
+      <p class="dan-nho" style="margin-bottom:0">Hộp thoại mở ra bằng cách lật và đứng lại, không phải mờ dần vào.</p>
+    </div>
+  </section>
+
+  <!-- ═══ MÀN HÌNH MẪU ═══ -->
+  <section class="doan">
+    <h2>Bốn màn hình ghép lại</h2>
+    <p class="dan chu-dat">Nền ở đây đang là gradient tạm. Khi có ảnh từ Gemini, thay bằng <code>background-image</code> trên <code>.nen-page</code> và giữ nguyên lớp <code>.an-toan</code> để chữ vẫn đọc được.</p>
+
+    <div class="hang" style="gap:22px;align-items:flex-start">
+
+      <!-- Phòng chờ -->
+      <div class="dt">
+        <div class="ten-mh" style="background:var(--dat-toi)">P03 · Phòng chờ</div>
+        <div class="than-mh nen-page an-toan">
+          <div class="giay-do ghim" style="text-align:center;padding:14px">
+            <span class="nhan" style="margin-bottom:2px">Mã sân</span>
+            <div class="baloo so" style="font-size:41px;letter-spacing:.18em">AB12CD</div>
+          </div>
+          <div class="chieu">
+            <ul>
+              <li><span class="non d-cham" style="width:36px;height:36px;font-size:16px">🧒<span class="chop" style="width:9px;height:9px;margin:-4px 0 0 -4px"></span></span> <b style="font-size:15px">Tí</b> <small style="margin-left:auto;opacity:.7">chủ trò</small></li>
+              <li><span class="non d-dieu" style="width:36px;height:36px;font-size:16px">🧒<span class="chop" style="width:9px;height:9px;margin:-4px 0 0 -4px"></span></span> <b style="font-size:15px">Sửu</b></li>
+              <li><span class="non d-la" style="width:36px;height:36px;font-size:16px">🧒<span class="chop" style="width:9px;height:9px;margin:-4px 0 0 -4px"></span></span> <b style="font-size:15px">Dần</b></li>
+            </ul>
+          </div>
+          <p class="chu-dat" style="font-size:15px;text-align:center;margin:0">Mới có ba đứa. Gửi link cho tụi nó đi.</p>
+          <div style="margin-top:auto;text-align:center"><button class="trong" style="width:96px;height:96px;font-size:18px">Bắt đầu</button></div>
+        </div>
+      </div>
+
+      <!-- Chọn bi -->
+      <div class="dt">
+        <div class="ten-mh" style="background:var(--dat-toi)">P06 · Chọn bi</div>
+        <div class="than-mh nen-page an-toan">
+          <div class="liep" style="margin:-14px -14px 0">
+            <span class="baloo" style="font-size:15px">Vòng 3</span>
+            <div class="huong" style="flex:1;--chay:64%"><div class="tro"></div><div class="khoi"></div><div class="than"></div></div>
+          </div>
+          <div class="giua giay-do" style="text-align:center">
+            <span class="nhan">Bỏ vào tay mấy viên?</span>
+            <div class="dem" style="justify-content:center">
+              <button class="nut sm" aria-label="Bớt">−</button>
+              <span class="dem-so so" style="font-size:51px;min-width:64px">4</span>
+              <button class="nut sm" aria-label="Thêm">+</button>
+            </div>
+            <div class="hang" style="justify-content:center;gap:5px;margin-top:6px">
+              <i class="bi"></i><i class="bi"></i><i class="bi"></i><i class="bi"></i>
+            </div>
+          </div>
+          <button class="nut la-chuoi lg" style="width:100%">Nắm tay lại</button>
+          <p class="chu-dat" style="font-size:13px;text-align:center;margin:0">Còn 7 viên trong túi</p>
+        </div>
+      </div>
+
+      <!-- Đoán tổng -->
+      <div class="dt">
+        <div class="ten-mh" style="background:var(--dat-toi)">P08 · Đoán tổng</div>
+        <div class="than-mh nen-page an-toan" style="background-image:var(--hat),linear-gradient(180deg,#A87C24 0 9%,#E4B575 9% 40%,#C98F4E 100%)">
+          <div class="hang" style="justify-content:center;gap:8px">
+            <span class="non d-cham" style="width:40px;height:40px;font-size:18px">✊<span class="chop" style="width:9px;height:9px;margin:-4px 0 0 -4px"></span></span>
+            <span class="non d-dieu" style="width:40px;height:40px;font-size:18px">✊<span class="chop" style="width:9px;height:9px;margin:-4px 0 0 -4px"></span></span>
+            <span class="non d-la" style="width:40px;height:40px;font-size:18px">✊<span class="chop" style="width:9px;height:9px;margin:-4px 0 0 -4px"></span></span>
+            <span class="non d-nghe" style="width:40px;height:40px;font-size:18px">✊<span class="chop" style="width:9px;height:9px;margin:-4px 0 0 -4px"></span></span>
+          </div>
+          <p class="chu-dat" style="font-size:15px;text-align:center;margin:0">Cả bọn giấu bi xong rồi</p>
+          <div class="giua giay-do" style="text-align:center">
+            <span class="nhan">Cả vòng có tổng mấy viên?</span>
+            <div class="dem" style="justify-content:center">
+              <button class="nut sm" aria-label="Bớt">−</button>
+              <span class="dem-so so" style="font-size:51px;min-width:74px">11</span>
+              <button class="nut sm" aria-label="Thêm">+</button>
+            </div>
+          </div>
+          <button class="nut la-chuoi lg" style="width:100%">Khóa đáp án</button>
+          <div class="huong" style="--chay:82%"><div class="tro"></div><div class="khoi"></div><div class="than"></div></div>
+        </div>
+      </div>
+
+      <!-- Kết quả -->
+      <div class="dt">
+        <div class="ten-mh" style="background:var(--dat-toi)">P10 · Kết quả lượt</div>
+        <div class="than-mh nen-page an-toan">
+          <div class="met" style="width:150px;margin:0 auto">
+            <span style="font-size:13px;font-weight:600">tổng thực tế</span>
+            <div class="baloo so" style="font-size:64px;line-height:1">11</div>
+          </div>
+          <div class="giay-do" style="padding:14px">
+            <div class="hang" style="justify-content:space-between;align-items:center;padding:5px 0;border-bottom:2px dashed rgba(42,33,27,.25)">
+              <span class="khan d-cham">Chàm</span><b class="so" style="font-family:'Baloo 2';font-size:26px">9</b>
+            </div>
+            <div class="hang" style="justify-content:space-between;align-items:center;padding:5px 0">
+              <span class="khan d-dieu">Điều</span>
+              <b class="so" style="font-family:'Baloo 2';font-size:26px;color:var(--la)">11 ✓</b>
+            </div>
+          </div>
+          <h3 style="text-align:center;font-size:26px;color:var(--phan);text-shadow:0 2px 0 var(--dat-toi);margin:0">Đội Điều trúng phóc!</h3>
+          <div style="margin-top:auto"><button class="nut the-tre lg" style="width:100%">Vòng sau</button></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══ GẮN ẢNH ═══ -->
+  <section class="doan">
+    <h2>Gắn ảnh nền vào</h2>
+    <div class="giay-do ghim" style="max-width:62ch">
+      <p>Mỗi màn hình có một biến nền riêng. Khi ảnh từ Gemini đã xuất WebP, chỉ cần trỏ đường dẫn:</p>
+      <pre style="background:rgba(42,33,27,.07);padding:14px;border-radius:6px;overflow:auto;font-size:14px;margin:0 0 14px"><code>.man-doan-tong .nen-page{
+  background-image: url("/nen/p08_guess_9x16.webp");
+}</code></pre>
+      <p>Giữ nguyên class <code>.an-toan</code> — nó phủ một lớp tối tông đất ở khoảng giữa để panel giấy dó luôn đọc được, kể cả khi ảnh nền sáng hơn dự tính.</p>
+      <p style="margin-bottom:0">Nếu ảnh chưa có, gradient tạm trong file này đã đúng tông màu, nên có thể ghép giao diện và code gameplay song song mà không phải chờ art.</p>
+    </div>
+  </section>
+
+</main>
+
+<div class="rem" id="rem" onclick="if(event.target===this)this.classList.remove('hien')">
+  <div class="cua">
+    <div class="then"></div>
+    <div class="giay-do ghim" style="text-align:center">
+      <h3 style="font-size:26px">Sạch túi rồi</h3>
+      <p>Hết bi thì xin tung xúc xắc vay thêm, hoặc ngồi ngoài xem tụi nó chơi nốt.</p>
+      <div class="hang" style="justify-content:center;margin-top:6px">
+        <button class="nut the-tre" onclick="document.getElementById('rem').classList.remove('hien')">Xin vay bi</button>
+        <button class="nut mo-cau" onclick="document.getElementById('rem').classList.remove('hien')">Ngồi xem</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="la-cuon" id="la">Đã sao chép link sân chơi</div>
+
+<script>
+function baoTin(chu){
+  const l = document.getElementById('la');
+  l.textContent = chu;
+  l.classList.add('hien');
+  clearTimeout(l._t);
+  l._t = setTimeout(()=>l.classList.remove('hien'), 2400);
+}
+
+// bộ đếm bi mẫu
+document.querySelectorAll('.dem').forEach(dem=>{
+  const so = dem.querySelector('.dem-so');
+  const [tru, cong] = dem.querySelectorAll('.nut');
+  tru.addEventListener('click', ()=> so.textContent = Math.max(1, +so.textContent - 1));
+  cong.addEventListener('click', ()=> so.textContent = Math.min(99, +so.textContent + 1));
+});
+
+// đóng cánh cửa bằng phím Esc
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape') document.getElementById('rem').classList.remove('hien');
+});
+</script>
+</body>
+</html>

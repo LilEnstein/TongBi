@@ -6,11 +6,30 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#12131a" />
-    <meta name="description" content="Tổng Bi — game dân gian đoán tổng bi, chơi cùng bạn bè qua một đường link." />
+    <meta name="theme-color" content="#B9803F" />
+    <meta
+      name="description"
+      content="Tổng Bi — ba giờ chiều, sân đất trước hiên nhà tranh, cả bọn ngồi bệt thành vòng tròn giấu bi trong nắm tay."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <title>Tổng Bi</title>
   </head>
   <body>
+    <!--
+      Bộ lọc làm nét mực rung nhẹ — art direction §4 "Quy tắc nét vẽ".
+      Mọi viền mực trong app tham chiếu tới filter này bằng url(#nham).
+    -->
+    <svg width="0" height="0" aria-hidden="true" style="position: absolute">
+      <filter id="nham" x="-12%" y="-12%" width="124%" height="124%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="7" result="n" />
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </svg>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -4,7 +4,10 @@ Game party multiplayer realtime mô phỏng trò chơi dân gian "đoán tổng 
 giấu một số bi trong lòng bàn tay, cả bàn đoán tổng số bi đang được giấu, ai đoán
 trúng thì ôm bi.
 
-Xây dựng theo bản thiết kế trong [docs/game-design.md](docs/game-design.md).
+Xây dựng theo bản thiết kế trong [docs/game-design.md](docs/game-design.md); toàn bộ
+lớp thẩm mỹ (màu, chất liệu, UI, âm thanh, VFX) theo
+[docs/tong_bi_artdirection_dangian.md](docs/tong_bi_artdirection_dangian.md) và bộ
+giao diện mẫu [docs/tong-bi-ui-kit.html](docs/tong-bi-ui-kit.html).
 
 ```
 CHỌN BI → BỎ VÀO TAY → NẮM TAY → ĐOÁN TỔNG → MỞ TAY → TÍNH TỔNG → CẬP NHẬT BI → LƯỢT SAU
@@ -21,7 +24,7 @@ Mở http://localhost:5173. Tạo phòng, copy link `/room/XXXXXX` rồi gửi c
 `vite` đã bật `host: true` nên điện thoại trong cùng mạng WiFi mở được luôn bằng IP LAN
 của máy chạy server.
 
-Muốn chơi thử một mình trước: **Chơi thử một mình (hướng dẫn 60 giây)** ở trang chủ.
+Muốn chơi thử một mình trước: **Chơi thử một mình** ở trang chủ.
 
 ## Kiến trúc
 
@@ -44,20 +47,69 @@ vào phase REVEAL.
 (`phaseStartedAt`, `START_REVEAL.at`, `DICE_ROLL_STARTED.at`) và client tự chạy
 animation từ mốc đó, nên mọi máy mở tay cùng một nhịp.
 
-## Đồ hoạ
+## Đồ hoạ — sân đất trước hiên nhà tranh
 
-Toàn bộ model 3D được dựng bằng code, không cần file GLB/GLTF nào:
+Game không diễn ra trong một "phòng chơi trực tuyến" mà ở **sân nhà**: ba giờ chiều,
+nền đất nện, một vòng tròn vạch bằng que, cả bọn ngồi bệt quanh vòng
+(art direction §1, §9.4). Không có bàn, không có nỉ xanh, không có card/panel/modal.
 
-- **Bàn tay có rig** (`apps/web/src/three/Hand.tsx`) — 4 ngón × 3 đốt + ngón cái 2 đốt,
-  mỗi đốt là một group lồng nhau nên xoay đốt gốc kéo theo cả ngón. Một giá trị `curl`
-  0→1 tạo ra chuỗi xoè tay → nắm tay. Các khớp cập nhật trong `useFrame` chứ không đi
-  qua React render.
-- **Bi, bàn, xúc xắc** — primitive của three.js; sáu mặt xúc xắc được vẽ bằng Canvas 2D
-  thành texture lúc chạy, nên đổi bộ hình phạt là mặt xúc xắc đổi theo.
-- **Âm thanh** (`apps/web/src/audio/sfx.ts`) — tổng hợp bằng WebAudio, không có file audio.
+**Mọi thành phần UI mang tên vật liệu, không mang tên component chuẩn** (§7) — đây là
+quy ước bắt buộc của repo để không ai vô thức quay về UI generic:
 
-Muốn thay bằng asset do artist làm (§45) thì chỉ cần thay `Hand.tsx` / `Dice.tsx` bằng
-model đã rig, phần còn lại không đổi.
+| Vật liệu | Class / component | Dùng cho |
+|---|---|---|
+| Giấy dó dán vách | `.giay-do` · `<GiayDo>` | mọi vùng chứa chữ |
+| Mẹt tre | `.met` · `<Met>` | ô thông báo tròn, tổng thực tế |
+| Chiếu cói | `.chieu` | danh sách người chơi |
+| Tấm liếp tre | `.liep` | thanh HUD trên đỉnh sân |
+| Thẻ tre / lá chuối / gạch nung / mo cau | `.nut` + `<Nut vat="tre\|la\|gach\|mo">` | nút chính / xác nhận / nguy hiểm / phụ |
+| Trống ếch | `.trong` · `<TrongEch>` | nút bắt đầu của chủ trò |
+| Khung nan tre | `.nan` | ô nhập |
+| Nón lá | `.non` · `<Non>` | khung avatar, chóp là màu đội |
+| Khăn đội | `.khan` · `<Khan>` | nhãn đội, kèm vật nhận dạng cho người mù màu |
+| Túi bi vải nâu | `.tui` · `<TuiBi>` | số bi còn lại, xẹp dần |
+| Nén hương | `.huong` · `<NenHuong>` | đồng hồ đếm ngược |
+| Vạch trên đất | `.vach` · `<VachDat>` | điểm, đếm bằng que |
+| Lá chuối cuốn | `.la-cuon` · `<LaCuonHop>` | báo tin |
+| Cánh cửa gỗ | `.cua` · `<CanhCua>` | hộp thoại |
+| Dây thừng | `.day-thung` | thanh trượt đoán tổng |
+
+Bảng màu, cỡ chữ và spec nút nằm trong `apps/web/src/styles.css`, lấy đúng token của
+§3–§8. Nét viền là mực nho có rung (filter SVG `#nham` khai báo trong `index.html`),
+bóng là khối cứng lệch 4px chứ không phải bóng mờ.
+
+**Nhịp ánh sáng (§2).** Mỗi phase là một khung giờ: 8h sảnh chờ → 10h chọn bi → 12h
+đoán tổng và mở tay → 15h xúc xắc → 17h tan sân. Chuyển bằng thuộc tính `data-gio` trên
+màn hình chơi, đổi tint của lớp `.nang` và hướng/màu mặt trời trong scene 3D — không
+phải dựng lại cảnh.
+
+Toàn bộ model 3D vẫn được dựng bằng code, không cần file GLB/GLTF nào:
+
+- **Bàn tay trẻ con có rig** (`apps/web/src/three/Hand.tsx`) — 4 ngón × 3 đốt + ngón cái
+  2 đốt, mỗi đốt là một group lồng nhau nên xoay đốt gốc kéo theo cả ngón. Một giá trị
+  `curl` 0→1 tạo ra chuỗi xoè tay → nắm tay. Tay ngắn mũm mĩm, móng cắt cụt, mu bàn tay
+  lấm đất, băng dán ở đốt ngón, và **vòng chỉ ở cổ tay là chỗ duy nhất mang màu đội**
+  (§9.1). Có thêm cử chỉ `nhìn trộm`, `lắc tay`, `quệt quần`. Các khớp cập nhật trong
+  `useFrame` chứ không đi qua React render.
+- **Sân đất** (`San.tsx`) — nền đất nện, vòng tròn vạch bằng que mờ dần qua từng vòng
+  chơi vì bị chân dẫm, vệt chân trần và vệt bi lăn.
+- **Bi ve thuỷ tinh** (`Marble.tsx`) — vỏ trong đục, dải xoáy màu bên trong.
+- **Xúc xắc gỗ mít** (`Dice.tsx`) — mặt khắc chìm bôi mực vẽ bằng Canvas 2D lúc chạy
+  (đổi bộ hình phạt là mặt xúc xắc đổi theo), lăn trên đất nên nảy rất ít và tung bụi.
+- **Toon shader 2 bậc + viền mực** (`toon.ts`) — viền chỉ bật khi sân ≤ 10 người để giữ
+  60fps trên máy tầm trung.
+- **Âm thanh dân gian** (`apps/web/src/audio/sfx.ts`) — sáo trúc, đàn bầu, trống ếch,
+  mõ, que tre, bi thuỷ tinh, chuông chùa; cộng lớp nền ve sầu to dần theo độ căng của
+  phase, gió lùa mái tranh và tiếng gà/chó/chổi tre ngẫu nhiên. Tất cả tổng hợp bằng
+  WebAudio, không có file audio nào.
+
+Ảnh nền 2D (16 trang, sinh bằng Gemini theo
+[docs/tong_bi_prompt_nen_gemini.md](docs/tong_bi_prompt_nen_gemini.md)) chưa có; các màn
+hình đã mang sẵn mã trang `man-p01` / `man-p02` / `man-p03` và `styles.css` có sẵn khối
+hướng dẫn gắn ảnh. Chưa có ảnh thì gradient tông đất đã đúng màu (§17.3).
+
+Muốn thay bằng asset do artist làm (§18 art direction) thì chỉ cần thay `Hand.tsx` /
+`Dice.tsx` bằng model đã rig, phần còn lại không đổi.
 
 ## Luật chơi
 
@@ -135,10 +187,12 @@ Biến môi trường: xem `.env.example`.
 
 Đã có: vòng chơi đầy đủ, phòng + link + QR, 2–30 người, 1–4 đội, thông tin ẩn,
 state machine server-authoritative, reconnect, timeout, xúc xắc 3D vay bi 3/6/9,
-hình phạt tuỳ chỉnh, loại người chơi, xếp hạng cuối trận, tutorial một mình, âm thanh,
-mobile-first UI.
+hình phạt tuỳ chỉnh, loại người chơi, xếp hạng cuối trận, tutorial một mình, âm thanh
+dân gian, mobile-first UI theo art direction dân gian (vật liệu, nhịp ánh sáng theo
+phase, giọng văn trẻ con, icon hình que, bụi đất và tia nắng lúc mở tay).
 
-Chưa có (phần "nên có" của §26 và Phase 4 §34): skin/avatar tuỳ biến, particle effect,
+Chưa có (phần "nên có" của §17.2 art direction và Phase 4 §34): 32 ảnh nền vẽ tay từ
+Gemini, bốn vật nhận dạng đội dạng 3D, skin bối cảnh theo mùa/vùng miền (§17.4),
 lịch sử trận, leaderboard, spectator, lưu trữ Postgres/Redis. Room hiện nằm trong bộ
 nhớ của một server instance — đủ cho 30 người/room như deployment guide mô tả cho MVP;
 muốn scale nhiều instance thì cần Redis adapter cho Socket.IO.

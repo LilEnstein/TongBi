@@ -1,18 +1,21 @@
-/** Viên bi thuỷ tinh — dùng chung cho đống bi, bi bay và bi trong lòng bàn tay. */
+/**
+ * Bi ve thuỷ tinh — art direction §9.2.
+ * Không phải cầu kim loại phản chiếu HDRI: vỏ thuỷ tinh trong đục, bên trong
+ * có một dải xoáy màu. Kích thước cỡ 16mm, bi đã chơi nhiều rồi.
+ */
 import { useMemo } from 'react';
-import { Color } from 'three';
+import { MAU, toonGradient } from './toon.js';
 
 export const MARBLE_RADIUS = 0.052;
 
+/** Màu dải xoáy trong ruột bi — lấy từ bảng màu vật liệu (§3). */
 export const MARBLE_COLORS = [
-  '#4aa3ff',
-  '#ff6b6b',
-  '#5ad18d',
-  '#ffd166',
-  '#c77dff',
-  '#4ecdc4',
-  '#ff9f45',
-  '#9bb4ff',
+  MAU.cham,
+  MAU.dieu,
+  MAU.la,
+  MAU.nghe,
+  '#2F6E63', // xanh ngọc
+  '#8A3A6B', // tím bầm
 ] as const;
 
 export function marbleColor(seed: number): string {
@@ -26,23 +29,25 @@ interface MarbleProps {
 }
 
 export function Marble({ position, color, scale = 1 }: MarbleProps) {
-  // Lõi sáng hơn vỏ để viên bi trông có chiều sâu như bi thuỷ tinh thật.
-  const core = useMemo(() => new Color(color).lerp(new Color('#ffffff'), 0.45), [color]);
+  // Dải xoáy nằm nghiêng một góc khác nhau ở mỗi viên, như bi thật.
+  const nghieng = useMemo(() => (position[0] + position[2]) * 9, [position]);
+
   return (
     <group position={position} scale={scale}>
+      {/* Vỏ thuỷ tinh: trong đục, hơi ngả vàng như bi để lâu trong túi vải. */}
       <mesh castShadow>
-        <sphereGeometry args={[MARBLE_RADIUS, 16, 12]} />
-        <meshStandardMaterial
-          color={color}
-          roughness={0.08}
-          metalness={0.05}
+        <sphereGeometry args={[MARBLE_RADIUS, 12, 9]} />
+        <meshToonMaterial
+          color={MAU.giay}
+          gradientMap={toonGradient()}
           transparent
-          opacity={0.92}
+          opacity={0.72}
         />
       </mesh>
-      <mesh scale={0.55}>
+      {/* Dải xoáy màu bên trong — dẹt và nghiêng nên nhìn hướng nào cũng thấy. */}
+      <mesh rotation={[nghieng, nghieng * 0.6, 0.5]} scale={[0.94, 0.34, 0.6]}>
         <sphereGeometry args={[MARBLE_RADIUS, 10, 8]} />
-        <meshStandardMaterial color={core} roughness={0.25} emissive={core} emissiveIntensity={0.28} />
+        <meshToonMaterial color={color} gradientMap={toonGradient()} />
       </mesh>
     </group>
   );

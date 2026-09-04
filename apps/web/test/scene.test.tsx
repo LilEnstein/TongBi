@@ -1,8 +1,8 @@
 /**
  * Kiểm tra scene 3D dựng đúng cấu trúc mà không cần trình duyệt thật.
  * @react-three/test-renderer chạy R3F headless nên có thể assert trên scene graph:
- * đủ ghế, tay có rig ngón, bi hiển thị đúng luật thông tin ẩn, xúc xắc chỉ xuất
- * hiện ở phase DICE_ROLL.
+ * đủ chỗ ngồi, tay có rig ngón, bi hiển thị đúng luật thông tin ẩn, và sân là
+ * nền đất chứ không phải cái bàn (art direction §9.4).
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -16,7 +16,7 @@ import {
 } from '@tongbi/game-rules';
 import { Hand } from '../src/three/Hand.js';
 import { PlayerSeat } from '../src/three/PlayerSeat.js';
-import { Table } from '../src/three/Table.js';
+import { San } from '../src/three/San.js';
 
 function player(id: string, seat: number, marbles = 10): Player {
   return {
@@ -119,12 +119,34 @@ describe('Bàn tay có rig — design doc §4', () => {
   });
 });
 
-describe('Bàn chơi', () => {
-  it('có mặt bàn, viền và chân bàn', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<Table />);
-    expect(countGeometry(renderer, 'CylinderGeometry')).toBeGreaterThanOrEqual(2);
-    expect(countGeometry(renderer, 'TorusGeometry')).toBe(1);
+describe('Sân đất — art direction §9.4', () => {
+  it('không có bàn: chỉ có nền đất và vòng tròn vạch bằng que', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<San />);
+    // Không còn mặt bàn hình trụ hay viền bàn hình xuyến.
+    expect(countGeometry(renderer, 'CylinderGeometry')).toBe(0);
+    expect(countGeometry(renderer, 'TorusGeometry')).toBe(0);
+    // Nền đất, vệt chân, vệt bi lăn đều là mặt phẳng tròn.
+    expect(countGeometry(renderer, 'CircleGeometry')).toBeGreaterThanOrEqual(3);
+    // Hai nét vạch chồng nhau — que vạch không bao giờ đi trúng một lần.
+    expect(countGeometry(renderer, 'RingGeometry')).toBe(2);
     await renderer.unmount();
+  });
+
+  it('vòng tròn mờ dần qua từng vòng chơi vì bị chân dẫm', async () => {
+    const doAm = async (round: number) => {
+      const r = await ReactThreeTestRenderer.create(<San round={round} />);
+      let max = 0;
+      r.scene.instance.traverse((o) => {
+        const m = (o as Mesh).material as { opacity?: number } | undefined;
+        const g = (o as Mesh).geometry;
+        if (g && g.type === 'RingGeometry' && typeof m?.opacity === 'number') {
+          max = Math.max(max, m.opacity);
+        }
+      });
+      await r.unmount();
+      return max;
+    };
+    expect(await doAm(6)).toBeLessThan(await doAm(1));
   });
 });
 
@@ -147,7 +169,7 @@ describe('Chỗ ngồi và thông tin ẩn — design doc §18', () => {
         isRolling={false}
       />,
     );
-    // Chỉ có bi của đống bi trước mặt (7 viên x 2 mesh mỗi viên), không có bi trong tay.
+    // Chỉ có đống bi trên đất (7 viên x 2 mesh: vỏ thuỷ tinh + dải xoáy), không có bi trong tay.
     expect(countGeometry(renderer, 'SphereGeometry')).toBe(14);
     await renderer.unmount();
   });
@@ -168,7 +190,7 @@ describe('Chỗ ngồi và thông tin ẩn — design doc §18', () => {
         isRolling={false}
       />,
     );
-    // 7 viên trong đống + 3 viên trong tay = 10 viên x 2 mesh.
+    // 7 viên trong đống + 3 viên trong tay = 10 viên x 2 mesh (vỏ + dải xoáy).
     expect(countGeometry(renderer, 'SphereGeometry')).toBe(20);
     await renderer.unmount();
   });
@@ -195,13 +217,13 @@ describe('Chỗ ngồi và thông tin ẩn — design doc §18', () => {
   });
 });
 
-describe('Bàn đầy người', () => {
-  it('dựng được 8 chỗ ngồi mà không lỗi', async () => {
+describe('Sân đông', () => {
+  it('dựng được 8 chỗ ngồi quanh vòng tròn mà không lỗi', async () => {
     const players = Array.from({ length: 8 }, (_, i) => player(`p${i}`, i));
     const room = roomWith(GamePhase.SELECT_MARBLES, players);
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <Table />
+        <San />
         {players.map((p, i) => (
           <PlayerSeat
             key={p.id}
@@ -220,7 +242,7 @@ describe('Bàn đầy người', () => {
         ))}
       </>,
     );
-    // 8 bàn tay x 14 capsule đốt.
+    // 8 bàn tay x 14 capsule đốt trở lên.
     expect(countGeometry(renderer, 'CapsuleGeometry')).toBeGreaterThanOrEqual(8 * 14);
     // 8 người x 10 bi x 2 mesh.
     expect(countGeometry(renderer, 'SphereGeometry')).toBe(160);

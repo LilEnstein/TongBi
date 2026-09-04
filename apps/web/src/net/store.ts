@@ -9,7 +9,7 @@ import type {
 } from '@tongbi/game-rules';
 import { getSocket } from './socket.js';
 import { loadSession, saveSession } from '../lib/session.js';
-import { sfx } from '../audio/sfx.js';
+import { nenSan, sfx } from '../audio/sfx.js';
 
 export interface Toast {
   id: number;
@@ -70,7 +70,8 @@ export const useGame = create<GameStore>((set) => ({
   },
   pushToast: (kind, text) => {
     const id = (toastSeq += 1);
-    set((s) => ({ toasts: [...s.toasts, { id, kind, text }] }));
+    // Nhiều nhất ba tàu lá cùng lúc — hơn nữa là che mất mái tranh.
+    set((s) => ({ toasts: [...s.toasts, { id, kind, text }].slice(-3) }));
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 3600);
   },
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
@@ -85,6 +86,19 @@ export const useGame = create<GameStore>((set) => ({
       kicked: null,
     }),
 }));
+
+/** Độ căng của từng phase, dùng cho tiếng ve nền — §2 và §12. */
+const DO_CANG: Record<string, number> = {
+  WAITING: 0.08,
+  ROUND_START: 0.24,
+  SELECT_MARBLES: 0.36,
+  CLOSE_HAND: 0.52,
+  GUESS_TOTAL: 0.88,
+  REVEAL: 0.6,
+  ROUND_RESULT: 0.3,
+  DICE_ROLL: 0.42,
+  GAME_OVER: 0.14,
+};
 
 let wired = false;
 
@@ -111,13 +125,15 @@ export function wireSocket(): void {
       diceCue: newRound ? null : s.diceCue,
     }));
     if (prev && prev.phase !== state.phase) sfx.phase(state.phase);
+    // Ve sầu to dần theo độ căng của phase — art direction §12.
+    nenSan.cang(DO_CANG[state.phase] ?? 0.3);
   });
 
   socket.on('PRIVATE_STATE', (priv) => useGame.setState({ privateState: priv }));
 
-  socket.on('PLAYER_LOCKED_MARBLES', () => sfx.handClose());
+  socket.on('PLAYER_LOCKED_MARBLES', () => sfx.namTay());
 
-  socket.on('ALL_PLAYERS_READY', () => sfx.whoosh());
+  socket.on('ALL_PLAYERS_READY', () => sfx.gio());
 
   socket.on('START_REVEAL', (cue) => useGame.setState({ revealCue: cue }));
 
@@ -126,14 +142,14 @@ export function wireSocket(): void {
     const me = useGame.getState().credentials?.playerId;
     const room = useGame.getState().room;
     const myTeam = room?.players.find((p) => p.id === me)?.teamId;
-    if (myTeam && result.winningTeamIds.includes(myTeam)) sfx.win();
-    else if (result.push) sfx.neutral();
-    else sfx.lose();
+    if (myTeam && result.winningTeamIds.includes(myTeam)) sfx.trung();
+    else if (result.push) sfx.hoa();
+    else sfx.trat();
   });
 
   socket.on('DICE_ROLL_STARTED', ({ playerId, at }) => {
     useGame.setState({ diceCue: { playerId, at, outcome: null } });
-    sfx.diceShake();
+    sfx.lacXucXac();
   });
 
   socket.on('DICE_ROLL_RESULT', (outcome) => {
@@ -143,8 +159,8 @@ export function wireSocket(): void {
     }));
   });
 
-  socket.on('PLAYER_JOINED', ({ name }) => pushToast('info', `${name} đã vào phòng.`));
-  socket.on('PLAYER_LEFT', ({ name }) => pushToast('info', `${name} đã rời phòng.`));
+  socket.on('PLAYER_JOINED', ({ name }) => pushToast('info', `${name} vừa ngồi xuống`));
+  socket.on('PLAYER_LEFT', ({ name }) => pushToast('info', `${name} về nhà rồi`));
   socket.on('CHAT', (m) => useGame.setState((s) => ({ chat: [...s.chat, m].slice(-50) })));
   socket.on('TOAST', ({ kind, text }) => pushToast(kind, text));
   socket.on('KICKED', ({ reason }) => {

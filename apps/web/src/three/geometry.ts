@@ -1,14 +1,18 @@
-/** Toạ độ chỗ ngồi quanh bàn — design doc §13, §41. */
+/**
+ * Toạ độ chỗ ngồi quanh vòng tròn vạch trên nền đất — design doc §41,
+ * art direction §9.4 (không có bàn, chỉ có sân đất).
+ */
 
-export const TABLE_RADIUS = 2.15;
+/** Bán kính vòng tròn vạch bằng que ở giữa sân. */
+export const VONG_RADIUS = 2.15;
 export const SEAT_RADIUS = 3.05;
 
 /** Khoảng cách tối thiểu giữa hai chỗ ngồi để tay và đống bi không chồng nhau. */
 const MIN_SEAT_ARC = 0.78;
 
 /**
- * Bán kính vòng ghế. Phòng ít người dùng bán kính mặc định; phòng đông
- * (tới 30 người) thì nới vòng ra để mỗi người vẫn có đủ chỗ.
+ * Bán kính vòng người ngồi. Sân ít người dùng bán kính mặc định; sân đông
+ * (tới 30 đứa) thì vòng tròn được vạch rộng ra cho đủ chỗ ngồi bệt.
  */
 export function seatRadius(count: number): number {
   if (count <= 0) return SEAT_RADIUS;
@@ -16,8 +20,9 @@ export function seatRadius(count: number): number {
 }
 
 /**
- * Góc của một ghế. Người chơi hiện tại luôn được xoay xuống phía trước camera
- * để ai cũng có cảm giác "mình đang ngồi ở đầu bàn", nhưng vẫn là cùng một bàn.
+ * Góc của một chỗ ngồi. Người chơi hiện tại luôn được xoay xuống phía trước
+ * camera để ai cũng thấy mình đang ngồi ở mép vòng gần nhất, nhưng vẫn là
+ * cùng một vòng tròn.
  */
 export function seatAngle(index: number, count: number, localIndex: number): number {
   const offset = ((index - localIndex) % count + count) % count;
@@ -28,7 +33,7 @@ export function seatPosition(angle: number, radius = SEAT_RADIUS): [number, numb
   return [Math.cos(angle) * radius, 0, Math.sin(angle) * radius];
 }
 
-/** Xoay model quanh trục Y để mặt trước (-Z) hướng vào tâm bàn. */
+/** Xoay model quanh trục Y để mặt trước (-Z) hướng vào tâm vòng. */
 export function facingCenter(angle: number): number {
   return Math.PI / 2 - angle;
 }
@@ -81,7 +86,7 @@ export function palmCluster(count: number): Array<[number, number, number]> {
   return out;
 }
 
-/** Vị trí đống bi trước mặt mỗi người. */
+/** Vị trí đống bi đặt trên đất trước mặt mỗi người. */
 export function pileCluster(count: number): Array<[number, number, number]> {
   const out: Array<[number, number, number]> = [];
   for (let i = 0; i < count; i += 1) {

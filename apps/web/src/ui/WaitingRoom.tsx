@@ -1,6 +1,6 @@
 /**
- * Sảnh chờ — design doc §14 (Waiting Room) và §22 (tạo phòng, gửi link).
- * Chủ phòng chỉnh luật ở đây; mọi người khác thấy luật cập nhật theo thời gian thực.
+ * P03 — Sân đã vạch xong, vòng tròn còn trống, chờ tụi nó tới.
+ * Art direction §7 (chiếu cói, giấy dó, trống ếch), §14 (giọng văn).
  */
 import { useState } from 'react';
 import {
@@ -12,7 +12,19 @@ import {
   type Penalty,
   type PublicRoomState,
 } from '@tongbi/game-rules';
-import { Button, CopyButton, QrCode } from './common.js';
+import {
+  doiTheoMau,
+  GiayDo,
+  IconPhat,
+  Khan,
+  LaTreRoi,
+  MaQR,
+  MucPhat,
+  Non,
+  Nut,
+  NutChepLink,
+  TrongEch,
+} from './common.js';
 
 interface Props {
   room: PublicRoomState;
@@ -39,127 +51,153 @@ export function WaitingRoom({
   onLeave,
   onSetPenalties,
 }: Props) {
-  const [tab, setTab] = useState<'people' | 'rules' | 'share'>('people');
+  const [the, setThe] = useState<'ai' | 'luat' | 'ru'>('ai');
   const link = `${window.location.origin}/room/${room.id}`;
-  const canStart = room.players.length >= MIN_PLAYERS;
-  const capacity = room.maxPlayers;
-  const isFull = room.players.length >= capacity;
+  const duNguoi = room.players.length >= MIN_PLAYERS;
+  const sucChua = room.maxPlayers;
+  const day = room.players.length >= sucChua;
 
   return (
-    <div className="lobby">
-      <header className="lobby__head">
-        <div>
-          <div className="lobby__code-label">MÃ PHÒNG</div>
-          <div className="lobby__code">{room.id}</div>
-          <div className={`lobby__capacity${isFull ? ' lobby__capacity--full' : ''}`}>
-            {room.players.length} / {capacity} người{isFull ? ' — phòng đã đầy' : ''}
-          </div>
+    <main className="san man-p03" data-gio="8h">
+      <LaTreRoi />
+
+      <div className="san-trong co-dau">
+        <div className="hang deu">
+          <GiayDo className="ma-san" style={{ flex: 1 }}>
+            <span className="nhan" style={{ marginBottom: 0 }}>
+              mã sân
+            </span>
+            <div className="so-ma so">{room.id}</div>
+            <p className={`suc-chua${day ? ' day' : ''}`}>
+              {room.players.length}/{sucChua} đứa{day ? ' — chật rồi' : ''}
+            </p>
+          </GiayDo>
+          <Nut vat="gach" co="sm" onClick={onLeave}>
+            Về nhà
+          </Nut>
         </div>
-        <Button variant="ghost" onClick={onLeave}>
-          Rời phòng
-        </Button>
-      </header>
 
-      <nav className="tabs">
-        <button className={tab === 'people' ? 'on' : ''} onClick={() => setTab('people')}>
-          Người chơi ({room.players.length}/{capacity})
-        </button>
-        <button className={tab === 'rules' ? 'on' : ''} onClick={() => setTab('rules')}>
-          Luật chơi
-        </button>
-        <button className={tab === 'share' ? 'on' : ''} onClick={() => setTab('share')}>
-          Mời bạn
-        </button>
-      </nav>
+        <nav className="the-chon">
+          <button className={the === 'ai' ? 'dang' : ''} onClick={() => setThe('ai')}>
+            Ai đang ngồi ({room.players.length})
+          </button>
+          <button className={the === 'luat' ? 'dang' : ''} onClick={() => setThe('luat')}>
+            Luật sân
+          </button>
+          <button className={the === 'ru' ? 'dang' : ''} onClick={() => setThe('ru')}>
+            Rủ thêm
+          </button>
+        </nav>
 
-      {tab === 'people' && (
-        <section className="lobby__body">
-          <ul className="players">
-            {room.players.map((p) => {
-              const team = room.teams.find((t) => t.id === p.teamId);
-              return (
-                <li key={p.id} className="player-row">
-                  <span className="player-row__avatar">{p.avatar}</span>
-                  <span className="player-row__name">
-                    {p.name}
-                    {p.id === myId && <em> (bạn)</em>}
-                    {p.isHost && <span className="tag tag--host">chủ phòng</span>}
-                    {!p.connected && <span className="tag tag--warn">mất kết nối</span>}
-                  </span>
-                  {room.teamMode > 0 && team && (
-                    <span className="tag" style={{ background: team.color }}>
-                      {team.name}
-                    </span>
-                  )}
-                  {isHost && p.id !== myId && (
-                    <button className="player-row__kick" onClick={() => onKick(p.id)} aria-label={`Mời ${p.name} ra`}>
-                      ✕
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-            {Array.from({ length: Math.max(0, MIN_PLAYERS - room.players.length) }).map((_, i) => (
-              <li key={`empty-${i}`} className="player-row player-row--empty">
-                Đang chờ người chơi…
-              </li>
-            ))}
-          </ul>
-
-          {room.teamMode > 0 && (
-            <div className="field">
-              <label>Đội của bạn</label>
-              <div className="chips">
-                {room.teams.map((t) => (
-                  <button
-                    key={t.id}
-                    className={`chip${room.players.find((p) => p.id === myId)?.teamId === t.id ? ' chip--on' : ''}`}
-                    style={{ borderColor: t.color }}
-                    onClick={() => onSetTeam(t.id)}
-                  >
-                    {t.name}
-                  </button>
+        {the === 'ai' && (
+          <>
+            <div className="chieu">
+              <ul>
+                {room.players.map((p) => {
+                  const team = room.teams.find((t) => t.id === p.teamId);
+                  const doi = doiTheoMau(team?.color);
+                  return (
+                    <li key={p.id} className={p.id === myId ? 'la-minh' : ''}>
+                      <Non avatar={p.avatar} doi={doi} nho mo={!p.connected} />
+                      <span className="ten">
+                        {p.name}
+                        {p.id === myId && <em>(bạn)</em>}
+                        {p.isHost && <span className="the">chủ trò</span>}
+                        {!p.connected && <span className="the canh">rớt mạng</span>}
+                      </span>
+                      {room.teamMode > 0 && team && <Khan doi={doi} ten={team.name} sm />}
+                      {isHost && p.id !== myId && (
+                        <button
+                          className="bo-ra"
+                          onClick={() => onKick(p.id)}
+                          aria-label={`Mời ${p.name} ra khỏi sân`}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
+                {Array.from({ length: Math.max(0, MIN_PLAYERS - room.players.length) }).map((_, i) => (
+                  <li key={`cho-${i}`} className="trong-cho">
+                    chỗ này còn trống…
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
-          )}
 
-          {isHost ? (
-            <Button full onClick={onStart} disabled={!canStart}>
-              {canStart ? 'BẮT ĐẦU' : `Cần ít nhất ${MIN_PLAYERS} người`}
-            </Button>
-          ) : (
-            <p className="panel__hint center">Đang chờ chủ phòng bắt đầu…</p>
-          )}
-        </section>
-      )}
+            {room.teamMode > 0 && (
+              <GiayDo>
+                <span className="nhan">bạn theo phe nào?</span>
+                <div className="chon-nhanh">
+                  {room.teams.map((t) => {
+                    const doi = doiTheoMau(t.color);
+                    const dang = room.players.find((p) => p.id === myId)?.teamId === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        className={`the-tre-nho${dang ? ' chon' : ''}`}
+                        onClick={() => onSetTeam(t.id)}
+                        aria-pressed={dang}
+                      >
+                        <Khan doi={doi} ten={t.name} sm />
+                      </button>
+                    );
+                  })}
+                </div>
+              </GiayDo>
+            )}
 
-      {tab === 'rules' && (
-        <section className="lobby__body">
-          <RulesEditor
+            <div className="canh-giua day">
+              {isHost ? (
+                <>
+                  <TrongEch
+                    onClick={onStart}
+                    disabled={!duNguoi}
+                    chu="Bắt đầu"
+                    phu={duNguoi ? 'gõ một cái' : `cần ${MIN_PLAYERS} đứa`}
+                  />
+                  <p className="dan-nho chu-dat">Gõ trống là cả sân nghe thấy cùng lúc.</p>
+                </>
+              ) : (
+                <p style={{ margin: 0 }}>
+                  <span className="loi-nhac">Chờ chủ trò gõ trống…</span>
+                </p>
+              )}
+              {room.players.length <= 1 && (
+                <p className="dan-nho chu-dat">Mới có mình bạn. Gửi link cho tụi nó đi.</p>
+              )}
+            </div>
+          </>
+        )}
+
+        {the === 'luat' && (
+          <LuatSan
             room={room}
             isHost={isHost}
             onUpdateSettings={onUpdateSettings}
             onSetTeamCount={onSetTeamCount}
             onSetPenalties={onSetPenalties}
           />
-        </section>
-      )}
+        )}
 
-      {tab === 'share' && (
-        <section className="lobby__body center">
-          <p className="panel__hint">Gửi link này vào nhóm chat, ai bấm vào là vào thẳng phòng.</p>
-          <div className="link-box">{link}</div>
-          <CopyButton text={link} />
-          <QrCode value={link} />
-          <p className="panel__note">Hoặc đọc mã phòng cho bạn bè tự nhập: <b>{room.id}</b></p>
-        </section>
-      )}
-    </div>
+        {the === 'ru' && (
+          <GiayDo ghim className="canh-giua">
+            <p>Gửi cái link này vào nhóm chat, đứa nào bấm vào là ngồi thẳng xuống sân.</p>
+            <div className="duong-link">{link}</div>
+            <NutChepLink text={link} />
+            <MaQR value={link} />
+            <p className="ghi-chu">
+              Hoặc đọc mã sân cho tụi nó tự gõ: <b className="so">{room.id}</b>
+            </p>
+          </GiayDo>
+        )}
+      </div>
+    </main>
   );
 }
 
-function RulesEditor({
+function LuatSan({
   room,
   isHost,
   onUpdateSettings,
@@ -173,74 +211,74 @@ function RulesEditor({
   onSetPenalties: (p: Penalty[]) => void;
 }) {
   const s = room.settings;
-  const [newPenalty, setNewPenalty] = useState('');
-  const disabled = !isHost;
+  const [phatMoi, setPhatMoi] = useState('');
+  const khoa = !isHost;
 
   return (
-    <div className="rules">
-      {!isHost && <p className="panel__note">Chỉ chủ phòng chỉnh được luật.</p>}
+    <GiayDo className="luat-muc">
+      {!isHost && <p className="ghi-chu" style={{ marginTop: 0 }}>Chỉ chủ trò mới sửa được luật sân.</p>}
 
-      <div className="field">
-        <label>Số bi khởi đầu</label>
-        <NumberRow
+      <div className="o-nhap">
+        <span className="nhan">mỗi đứa bắt đầu với mấy viên</span>
+        <DemNho
           value={s.startingMarbles}
           min={1}
           max={40}
-          disabled={disabled}
+          disabled={khoa}
           onChange={(n) => onUpdateSettings({ startingMarbles: n })}
         />
       </div>
 
-      <div className="field">
-        <label>Số vòng</label>
-        <NumberRow
+      <div className="o-nhap">
+        <span className="nhan">chơi mấy vòng</span>
+        <DemNho
           value={s.totalRounds}
           min={1}
           max={30}
-          disabled={disabled}
+          disabled={khoa}
           onChange={(n) => onUpdateSettings({ totalRounds: n })}
         />
       </div>
 
-      <div className="field">
-        <label>Bi tối đa mỗi lượt (0 = không giới hạn)</label>
-        <NumberRow
+      <div className="o-nhap">
+        <span className="nhan">mỗi lượt được bỏ nhiều nhất mấy viên (0 = thoải mái)</span>
+        <DemNho
           value={s.maxBet}
           min={0}
           max={20}
-          disabled={disabled}
+          disabled={khoa}
           onChange={(n) => onUpdateSettings({ maxBet: n })}
         />
       </div>
 
-      <div className="field">
-        <label>Cách chia đội</label>
-        <div className="chips">
+      <div className="o-nhap">
+        <span className="nhan">chia phe kiểu gì</span>
+        <div className="chon-nhanh">
           {[0, 2, 3, 4].slice(0, MAX_TEAMS + 1).map((n) => (
             <button
               key={n}
-              className={`chip${room.teamMode === n ? ' chip--on' : ''}`}
-              disabled={disabled}
+              className={`the-tre-nho${room.teamMode === n ? ' chon' : ''}`}
+              disabled={khoa}
               onClick={() => onSetTeamCount(n)}
             >
-              {n === 0 ? 'Mỗi người một đội' : `${n} đội`}
+              {n === 0 ? 'ai lo thân nấy' : `${n} phe`}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="field">
-        <label>Luật thắng lượt</label>
-        <div className="chips">
+      <div className="o-nhap">
+        <span className="nhan">thế nào là trúng</span>
+        <div className="chon-nhanh">
           {[
-            { v: WinRule.EXACT, l: 'Đoán đúng tuyệt đối' },
-            { v: WinRule.CLOSEST, l: 'Gần nhất thì thắng' },
-            { v: WinRule.EXACT_UNIQUE, l: 'Đúng & không trùng' },
+            { v: WinRule.EXACT, l: 'trúng phóc mới ăn' },
+            { v: WinRule.CLOSEST, l: 'gần nhất là ăn' },
+            { v: WinRule.EXACT_UNIQUE, l: 'trúng phóc & không đụng ai' },
           ].map((o) => (
             <button
               key={o.v}
-              className={`chip${s.winRule === o.v ? ' chip--on' : ''}`}
-              disabled={disabled}
+              className={`the-tre-nho${s.winRule === o.v ? ' chon' : ''}`}
+              disabled={khoa}
               onClick={() => onUpdateSettings({ winRule: o.v })}
             >
               {o.l}
@@ -249,102 +287,108 @@ function RulesEditor({
         </div>
       </div>
 
-      <div className="field">
-        <label>Ăn thua bi</label>
-        <div className="chips">
+      <div className="o-nhap">
+        <span className="nhan">ăn thua bao nhiêu bi</span>
+        <div className="chon-nhanh">
           <button
-            className={`chip${s.payout === PayoutMode.STAKE ? ' chip--on' : ''}`}
-            disabled={disabled}
+            className={`the-tre-nho${s.payout === PayoutMode.STAKE ? ' chon' : ''}`}
+            disabled={khoa}
             onClick={() => onUpdateSettings({ payout: PayoutMode.STAKE })}
           >
-            Bi đặt là bi cược
+            bi trong tay là bi cược
           </button>
           <button
-            className={`chip${s.payout === PayoutMode.FIXED ? ' chip--on' : ''}`}
-            disabled={disabled}
+            className={`the-tre-nho${s.payout === PayoutMode.FIXED ? ' chon' : ''}`}
+            disabled={khoa}
             onClick={() => onUpdateSettings({ payout: PayoutMode.FIXED })}
           >
-            Thắng/thua cố định
+            ăn thua cố định
           </button>
         </div>
         {s.payout === PayoutMode.FIXED && (
-          <NumberRow
-            value={s.fixedPayout}
-            min={1}
-            max={10}
-            disabled={disabled}
-            onChange={(n) => onUpdateSettings({ fixedPayout: n })}
-          />
+          <div style={{ marginTop: 10 }}>
+            <DemNho
+              value={s.fixedPayout}
+              min={1}
+              max={10}
+              disabled={khoa}
+              onChange={(n) => onUpdateSettings({ fixedPayout: n })}
+            />
+          </div>
         )}
-        <p className="panel__note">
+        <p className="ghi-chu">
           {s.payout === PayoutMode.STAKE
-            ? 'Bi đã bỏ vào tay là tiền cược: đội thắng chia số bi của phe thua.'
-            : `Đội thắng được +${s.fixedPayout} bi, phe thua mất ${s.fixedPayout} bi.`}
+            ? 'Bi đã bỏ vào tay coi như đặt xuống đất: phe trúng chia nhau bi của phe trật.'
+            : `Phe trúng ăn ${s.fixedPayout} bi, phe trật mất ${s.fixedPayout} bi.`}
         </p>
       </div>
 
-      <div className="field">
-        <label>Khi hết bi</label>
-        <div className="chips">
+      <div className="o-nhap">
+        <span className="nhan">sạch túi thì sao</span>
+        <div className="chon-nhanh">
           <button
-            className={`chip${s.brokeRule === BrokeRule.DICE ? ' chip--on' : ''}`}
-            disabled={disabled}
+            className={`the-tre-nho${s.brokeRule === BrokeRule.DICE ? ' chon' : ''}`}
+            disabled={khoa}
             onClick={() => onUpdateSettings({ brokeRule: BrokeRule.DICE, diceEnabled: true })}
           >
-            Tung xúc xắc vay bi
+            tung xúc xắc vay bi
           </button>
           <button
-            className={`chip${s.brokeRule === BrokeRule.ELIMINATE ? ' chip--on' : ''}`}
-            disabled={disabled}
+            className={`the-tre-nho${s.brokeRule === BrokeRule.ELIMINATE ? ' chon' : ''}`}
+            disabled={khoa}
             onClick={() => onUpdateSettings({ brokeRule: BrokeRule.ELIMINATE })}
           >
-            Bị loại luôn
+            ra ngồi ngoài luôn
           </button>
         </div>
       </div>
 
-      <div className="field">
-        <label>Thời gian mỗi bước (giây)</label>
-        <div className="grid-3">
-          <NumberRow
-            label="Chọn bi"
+      <div className="o-nhap">
+        <span className="nhan">mỗi bước cho mấy giây</span>
+        <div className="ba-cot">
+          <DemNho
+            label="chọn bi"
             value={s.selectSeconds}
             min={5}
             max={90}
-            disabled={disabled}
+            disabled={khoa}
             onChange={(n) => onUpdateSettings({ selectSeconds: n })}
           />
-          <NumberRow
-            label="Đoán"
+          <DemNho
+            label="đoán"
             value={s.guessSeconds}
             min={5}
             max={90}
-            disabled={disabled}
+            disabled={khoa}
             onChange={(n) => onUpdateSettings({ guessSeconds: n })}
           />
-          <NumberRow
-            label="Xem kết quả"
+          <DemNho
+            label="xem kết quả"
             value={s.revealSeconds}
             min={2}
             max={20}
-            disabled={disabled}
+            disabled={khoa}
             onChange={(n) => onUpdateSettings({ revealSeconds: n })}
           />
         </div>
       </div>
 
-      <div className="field">
-        <label>Hình phạt trên xúc xắc</label>
-        <ul className="penalties">
+      <div className="o-nhap">
+        <span className="nhan">phạt gì khi xúc xắc trúng mặt phạt</span>
+        <ul className="danh-phat">
           {s.penalties.map((p) => (
             <li key={p.id}>
               <span>
-                {p.icon} {p.label}
+                <IconPhat id={p.id} size={30} />
+                <span>
+                  {p.label}
+                  <MucPhat muc={p.severity} />
+                </span>
               </span>
               {isHost && s.penalties.length > 3 && (
                 <button
                   onClick={() => onSetPenalties(s.penalties.filter((x) => x.id !== p.id))}
-                  aria-label={`Xoá ${p.label}`}
+                  aria-label={`Bỏ hình phạt ${p.label}`}
                 >
                   ✕
                 </button>
@@ -354,10 +398,11 @@ function RulesEditor({
         </ul>
         {isHost && (
           <form
-            className="row"
+            className="hang"
+            style={{ flexWrap: 'nowrap' }}
             onSubmit={(e) => {
               e.preventDefault();
-              const label = newPenalty.trim();
+              const label = phatMoi.trim();
               if (!label) return;
               onSetPenalties([
                 ...s.penalties,
@@ -369,31 +414,34 @@ function RulesEditor({
                   severity: 'MEDIUM',
                 },
               ]);
-              setNewPenalty('');
+              setPhatMoi('');
             }}
           >
-            <input
-              value={newPenalty}
-              onChange={(e) => setNewPenalty(e.target.value)}
-              placeholder="Thêm hình phạt của bạn…"
-              maxLength={40}
-            />
-            <Button type="submit" variant="ghost">
+            <label className="nan">
+              <input
+                value={phatMoi}
+                onChange={(e) => setPhatMoi(e.target.value)}
+                placeholder="nghĩ ra trò phạt khác…"
+                maxLength={40}
+                aria-label="Hình phạt tự thêm"
+              />
+            </label>
+            <Nut type="submit" co="sm">
               Thêm
-            </Button>
+            </Nut>
           </form>
         )}
-        <p className="panel__note">
-          Xúc xắc luôn có 3 mặt vay bi (+3 / +6 / +9) và 3 mặt hình phạt lấy từ danh sách này.
+        <p className="ghi-chu">
+          Xúc xắc gỗ có ba mặt cho vay bi (3 · 6 · 9) và ba mặt là trò phạt lấy từ đây.
         </p>
       </div>
 
-      <p className="panel__note">Phòng tối đa {room.maxPlayers} người.</p>
-    </div>
+      <p className="ghi-chu">Sân này chứa tối đa {room.maxPlayers} đứa.</p>
+    </GiayDo>
   );
 }
 
-function NumberRow({
+function DemNho({
   value,
   min,
   max,
@@ -409,14 +457,14 @@ function NumberRow({
   label?: string;
 }) {
   return (
-    <div className="numrow">
-      {label && <small>{label}</small>}
-      <div className="numrow__ctl">
-        <button disabled={disabled || value <= min} onClick={() => onChange(value - 1)}>
+    <div>
+      {label && <small style={{ display: 'block', fontSize: 13, opacity: 0.7 }}>{label}</small>}
+      <div className="dem-nho">
+        <button disabled={disabled || value <= min} onClick={() => onChange(value - 1)} aria-label="Bớt">
           −
         </button>
-        <b>{value}</b>
-        <button disabled={disabled || value >= max} onClick={() => onChange(value + 1)}>
+        <b className="so">{value}</b>
+        <button disabled={disabled || value >= max} onClick={() => onChange(value + 1)} aria-label="Thêm">
           +
         </button>
       </div>

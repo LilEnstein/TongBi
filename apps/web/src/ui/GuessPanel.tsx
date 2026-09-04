@@ -1,10 +1,10 @@
 /**
- * Nhập tổng bi cả bàn — design doc §5, §14 (Guess UI).
- * Cả đội chia sẻ một đáp án: ai cũng chỉnh được, khoá rồi thì không đổi.
+ * P08 — Cả vòng giấu bi xong, giờ đoán tổng. Art direction §7, §10 (mực loang
+ * khi khoá đáp án), §14 (giọng văn).
  */
 import { useEffect, useState } from 'react';
 import { guessBounds, type GameSettings, type Player, type Team } from '@tongbi/game-rules';
-import { Button } from './common.js';
+import { doiTheoMau, GiayDo, Khan, Nut } from './common.js';
 import { sfx, unlockAudio } from '../audio/sfx.js';
 
 interface Props {
@@ -35,86 +35,88 @@ export function GuessPanel({
   onLock,
 }: Props) {
   const { min, max } = guessBounds(activePlayers, settings);
-  const [value, setValue] = useState(() => teamPending ?? Math.round((min + max) / 2));
+  const [so, setSo] = useState(() => teamPending ?? Math.round((min + max) / 2));
 
   // Đồng đội chỉnh thì mình thấy đổi theo.
   useEffect(() => {
-    if (teamPending !== null && teamPending !== value && !locked) setValue(teamPending);
+    if (teamPending !== null && teamPending !== so && !locked) setSo(teamPending);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamPending, locked]);
 
-  const isTeamPlay = teammates.length > 1;
+  const choiPhe = teammates.length > 1;
+  const doi = doiTheoMau(myTeam?.color);
 
   if (locked) {
     return (
-      <div className="panel panel--calm">
-        <div className="panel__title">Đã khoá đáp án 🔒</div>
-        <p className="panel__hint">
-          {myTeam?.name ?? 'Đội bạn'} đoán <b>{teamPending ?? value}</b>. Đang chờ các đội còn lại…
+      <GiayDo className="canh-giua loang-muc">
+        <h2 className="tua">Đóng dấu rồi 🔒</h2>
+        <p className="moi">
+          {myTeam ? <Khan doi={doi} ten={myTeam.name} sm /> : 'Bạn'} đoán{' '}
+          <b className="so" style={{ fontFamily: "'Baloo 2', cursive", fontSize: 26 }}>
+            {teamPending ?? so}
+          </b>
+          . Chờ mấy phe kia chốt nốt.
         </p>
-        <div className="pill">
-          {lockedTeams}/{totalTeams} đội đã khoá
-        </div>
-      </div>
+        <span className="manh-giay">
+          {lockedTeams}/{totalTeams} phe đã chốt
+        </span>
+      </GiayDo>
     );
   }
 
-  const set = (n: number) => {
-    const next = Math.min(max, Math.max(min, n));
-    if (next !== value) {
+  const dat = (n: number) => {
+    const moi = Math.min(max, Math.max(min, n));
+    if (moi !== so) {
       unlockAudio();
-      sfx.marbleClick();
+      sfx.bi();
     }
-    setValue(next);
-    onChange(next);
+    setSo(moi);
+    onChange(moi);
   };
 
   return (
-    <div className="panel">
-      <div className="panel__title">Tổng bi bạn đoán?</div>
-      <p className="panel__hint">
-        Tất cả bàn tay đã nắm lại. Đoán tổng số bi đang được giấu — trong khoảng{' '}
-        <b>
+    <GiayDo ghim className="dan-len">
+      <h2 className="tua">Cả vòng có tổng mấy viên?</h2>
+      <p className="moi">
+        Tay đứa nào cũng nắm chặt rồi. Đoán trong khoảng{' '}
+        <b className="so">
           {min}–{max}
         </b>
-        .
-        {isTeamPlay && ' Cả đội dùng chung một đáp án.'}
+        {choiPhe ? '. Cả phe chung một đáp án đấy.' : '.'}
       </p>
 
-      <div className="stepper">
-        <button className="stepper__btn" onClick={() => set(value - 1)} disabled={value <= min} aria-label="Giảm">
+      <div className="dem">
+        <Nut co="sm" onClick={() => dat(so - 1)} disabled={so <= min} nhan="Bớt">
           −
-        </button>
-        <div className="stepper__value stepper__value--big">
-          <span>{value}</span>
-        </div>
-        <button className="stepper__btn" onClick={() => set(value + 1)} disabled={value >= max} aria-label="Tăng">
+        </Nut>
+        <span className="dem-so tong so">{so}</span>
+        <Nut co="sm" onClick={() => dat(so + 1)} disabled={so >= max} nhan="Thêm">
           +
-        </button>
+        </Nut>
       </div>
 
       <input
-        className="slider"
+        className="day-thung"
         type="range"
         min={min}
         max={max}
-        value={value}
-        onChange={(e) => set(Number(e.target.value))}
-        aria-label="Tổng bi dự đoán"
+        value={so}
+        onChange={(e) => dat(Number(e.target.value))}
+        aria-label="Tổng bi bạn đoán"
       />
 
-      <Button full variant="success" onClick={() => onLock(value)}>
-        Khoá đáp án 🔒
-      </Button>
+      <Nut vat="la" co="lg" rong onClick={() => onLock(so)}>
+        Khoá đáp án
+      </Nut>
 
-      {isTeamPlay && (
-        <p className="panel__note">
-          Đồng đội: {teammates.filter((t) => t.id !== me.id).map((t) => t.name).join(', ') || '—'}
+      {choiPhe && (
+        <p className="ghi-chu">
+          Cùng phe: {teammates.filter((t) => t.id !== me.id).map((t) => t.name).join(', ') || '—'}
         </p>
       )}
-      <div className="pill">
-        {lockedTeams}/{totalTeams} đội đã khoá
-      </div>
-    </div>
+      <p className="ghi-chu">
+        {lockedTeams}/{totalTeams} phe đã chốt
+      </p>
+    </GiayDo>
   );
 }

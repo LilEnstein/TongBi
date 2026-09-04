@@ -1,5 +1,9 @@
-/** Kết quả lượt — design doc §7 và §14 (Result UI). */
+/**
+ * P10 — Mở tay, đếm bi. Tổng thật nằm giữa mẹt tre, dưới là phe nào đoán bao nhiêu.
+ * Art direction §7, §10 (bụi đất, không confetti), §14.
+ */
 import type { Player, RoundResult, Team } from '@tongbi/game-rules';
+import { doiTheoMau, GiayDo, Khan, Met, VachDat } from './common.js';
 
 interface Props {
   result: RoundResult;
@@ -9,59 +13,67 @@ interface Props {
 }
 
 export function ResultPanel({ result, teams, players, myTeamId }: Props) {
-  const teamName = (id: string) => teams.find((t) => t.id === id)?.name ?? id;
-  const teamColor = (id: string) => teams.find((t) => t.id === id)?.color ?? '#888';
-  const iWon = myTeamId ? result.winningTeamIds.includes(myTeamId) : false;
+  const tenPhe = (id: string) => teams.find((t) => t.id === id)?.name ?? id;
+  const doiCua = (id: string) => doiTheoMau(teams.find((t) => t.id === id)?.color);
+  const minhTrung = myTeamId ? result.winningTeamIds.includes(myTeamId) : false;
 
-  const headline = result.push
-    ? 'Không đội nào đoán trúng — hoàn bi!'
-    : iWon
-      ? 'Đội bạn thắng lượt này! 🎉'
-      : `${result.winningTeamIds.map(teamName).join(', ')} thắng lượt này`;
+  const reo = result.push
+    ? 'Trật lất cả lũ — bi ai nấy giữ'
+    : minhTrung
+      ? 'Trúng phóc!'
+      : `${result.winningTeamIds.map(tenPhe).join(', ')} trúng phóc`;
 
   return (
-    <div className={`panel result${iWon ? ' result--win' : ''}`}>
-      <div className="result__total">
-        <span>TỔNG THỰC TẾ</span>
-        <b>{result.actualTotal}</b>
-      </div>
+    <>
+      <Met className="tong-that hien">
+        <span className="nhan-nho">tổng thực tế</span>
+        <div className="so-to so">{result.actualTotal}</div>
+      </Met>
 
-      <div className="result__headline">{headline}</div>
+      <p className="reo">{reo}</p>
 
-      <ul className="result__guesses">
-        {result.guesses.map((g) => {
-          const won = result.winningTeamIds.includes(g.teamId);
-          return (
-            <li key={g.teamId} className={won ? 'is-win' : g.disqualified ? 'is-dq' : ''}>
-              <span className="dot" style={{ background: teamColor(g.teamId) }} />
-              <span className="name">{teamName(g.teamId)}</span>
-              <span className="value">{g.value}</span>
-              <span className="mark">
-                {won ? '✓' : g.disqualified ? 'trùng đáp án' : `lệch ${g.delta}`}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+      <GiayDo>
+        <ul className="bang-doan">
+          {result.guesses.map((g) => {
+            const trung = result.winningTeamIds.includes(g.teamId);
+            const diem = teams.find((t) => t.id === g.teamId)?.score ?? 0;
+            return (
+              <li key={g.teamId} className={trung ? 'trung' : g.disqualified ? 'hong' : ''}>
+                <Khan doi={doiCua(g.teamId)} ten={tenPhe(g.teamId)} sm />
+                <span className="lech">
+                  {trung ? 'trúng' : g.disqualified ? 'đụng đáp án' : `lệch ${g.delta}`}
+                </span>
+                <span className="so-doan so">{g.value}</span>
+                {diem > 0 && (
+                  <span className="vach-nho">
+                    <VachDat so={diem} />
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
 
-      <div className="result__deltas">
-        {result.reveals.map((r) => {
-          const p = players.find((x) => x.id === r.playerId);
-          const d = result.marbleDeltas.find((x) => x.playerId === r.playerId);
-          if (!p) return null;
-          return (
-            <div key={r.playerId} className="result__row">
-              <span>
-                {p.avatar} {p.name}
-              </span>
-              <span className="result__hand">giấu {r.marbles}</span>
-              <span className={`result__delta ${(d?.delta ?? 0) >= 0 ? 'up' : 'down'}`}>
-                {(d?.delta ?? 0) > 0 ? `+${d?.delta}` : (d?.delta ?? 0)} → {d?.after ?? p.marbleCount}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+        <div style={{ marginTop: 12 }}>
+          {result.reveals.map((r) => {
+            const p = players.find((x) => x.id === r.playerId);
+            const d = result.marbleDeltas.find((x) => x.playerId === r.playerId);
+            if (!p) return null;
+            const chenh = d?.delta ?? 0;
+            return (
+              <div key={r.playerId} className="dong-bi">
+                <span>
+                  {p.avatar} {p.name}
+                </span>
+                <span className="giau">giấu {r.marbles}</span>
+                <span className={`chenh so ${chenh >= 0 ? 'len' : 'xuong'}`}>
+                  {chenh > 0 ? `+${chenh}` : chenh} → {d?.after ?? p.marbleCount}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </GiayDo>
+    </>
   );
 }

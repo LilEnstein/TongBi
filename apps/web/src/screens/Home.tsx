@@ -1,27 +1,30 @@
-/** Lobby — design doc §14: tạo phòng, nhập mã phòng, chọn tên và avatar. */
+/**
+ * P01/P02 — Sân trước hiên nhà: đặt tên, chọn mặt, vạch sân mới hoặc vào sân bạn.
+ * Art direction §7 (vật liệu), §14 (giọng văn trẻ con nói với nhau).
+ */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AVATARS, type SessionCredentials } from '@tongbi/game-rules';
 import { emitAck } from '../net/socket.js';
 import { useGame } from '../net/store.js';
 import { loadProfile, saveProfile } from '../lib/session.js';
-import { Button } from '../ui/common.js';
+import { GiayDo, LaTreRoi, Non, Nut } from '../ui/common.js';
 
 export function Home() {
   const navigate = useNavigate();
   const profile = loadProfile();
   const [name, setName] = useState(profile.name);
   const [avatar, setAvatar] = useState(profile.avatar);
-  const [code, setCode] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [ma, setMa] = useState('');
+  const [dangVach, setDangVach] = useState(false);
   const connected = useGame((s) => s.connected);
   const setCredentials = useGame((s) => s.setCredentials);
-  const pushToast = useGame((s) => s.pushToast);
+  const baoTin = useGame((s) => s.pushToast);
 
-  const ready = name.trim().length > 0 && connected && !busy;
+  const sanSang = name.trim().length > 0 && connected && !dangVach;
 
-  const createRoom = async () => {
-    setBusy(true);
+  const vachSan = async () => {
+    setDangVach(true);
     saveProfile({ name: name.trim(), avatar });
     try {
       const res = await emitAck<{ credentials: SessionCredentials }>('CREATE_ROOM', {
@@ -31,96 +34,119 @@ export function Home() {
       setCredentials(res.credentials);
       navigate(`/room/${res.credentials.roomId}`);
     } catch (e) {
-      pushToast('error', (e as Error).message);
+      baoTin('error', (e as Error).message);
     } finally {
-      setBusy(false);
+      setDangVach(false);
     }
   };
 
-  const joinRoom = () => {
-    const clean = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (clean.length < 4) {
-      pushToast('error', 'Mã phòng chưa đúng.');
+  const vaoSan = () => {
+    const sach = ma.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (sach.length < 4) {
+      baoTin('error', 'Mã sân này lạ quá, xem lại đi');
       return;
     }
     saveProfile({ name: name.trim(), avatar });
-    navigate(`/room/${clean}`);
+    navigate(`/room/${sach}`);
   };
 
   return (
-    <main className="home">
-      <div className="home__hero">
-        <div className="home__marbles" aria-hidden>
-          <span /> <span /> <span /> <span />
-        </div>
-        <h1>TỔNG BI</h1>
-        <p>Giấu bi trong tay. Đoán tổng cả bàn. Ai đoán trúng, người đó ôm bi.</p>
-      </div>
+    <main className="san man-p01">
+      <LaTreRoi />
 
-      <div className="card">
-        <div className="field">
-          <label htmlFor="name">Tên của bạn</label>
-          <input
-            id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nhập tên…"
-            maxLength={16}
-            autoComplete="nickname"
-          />
+      <header className="mai">
+        <h1 className="hieu" data-chu="TỔNG BI">
+          TỔNG BI
+        </h1>
+        <p className="phu">Giấu bi trong tay · đoán tổng cả vòng · ai trúng thì ôm bi về</p>
+      </header>
+
+      <div className="san-trong">
+        <div className="doi-hinh" aria-hidden>
+          <i className="bi" />
+          <i className="bi x2" />
+          <i className="bi x3" />
+          <i className="bi" />
         </div>
 
-        <div className="field">
-          <label>Chọn avatar</label>
-          <div className="avatars">
-            {AVATARS.map((a) => (
-              <button
-                key={a}
-                className={`avatar${a === avatar ? ' avatar--on' : ''}`}
-                onClick={() => setAvatar(a)}
-                aria-label={`Avatar ${a}`}
-              >
-                {a}
-              </button>
-            ))}
+        <GiayDo ghim>
+          <div className="o-nhap">
+            <label className="nhan" htmlFor="ten">
+              tụi nó gọi bạn là gì?
+            </label>
+            <label className="nan">
+              <input
+                id="ten"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="gõ tên vào đây…"
+                maxLength={16}
+                autoComplete="nickname"
+              />
+            </label>
           </div>
-        </div>
 
-        <Button full onClick={() => void createRoom()} disabled={!ready}>
-          Tạo phòng mới
-        </Button>
-
-        <div className="divider">hoặc</div>
-
-        <div className="field">
-          <label htmlFor="code">Mã phòng</label>
-          <div className="row">
-            <input
-              id="code"
-              className="code-input"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="VD: AB12CD"
-              maxLength={8}
-              autoCapitalize="characters"
-              autoCorrect="off"
-            />
-            <Button onClick={joinRoom} disabled={!ready} variant="ghost">
-              Vào
-            </Button>
+          <div className="o-nhap">
+            <span className="nhan">chọn cái mặt</span>
+            <div className="chon-non">
+              {AVATARS.map((a) => (
+                <button
+                  key={a}
+                  onClick={() => setAvatar(a)}
+                  aria-label={`Chọn mặt ${a}`}
+                  aria-pressed={a === avatar}
+                >
+                  <Non avatar={a} chon={a === avatar} />
+                </button>
+              ))}
+            </div>
           </div>
+
+          <Nut vat="la" co="lg" rong onClick={() => void vachSan()} disabled={!sanSang} cho={dangVach}>
+            Vạch sân mới
+          </Nut>
+        </GiayDo>
+
+        <p className="canh-giua chu-dat" style={{ margin: 0 }}>
+          hoặc
+        </p>
+
+        <GiayDo>
+          <div className="o-nhap">
+            <label className="nhan" htmlFor="ma">
+              mã sân là gì?
+            </label>
+            <label className="nan ma">
+              <input
+                id="ma"
+                value={ma}
+                onChange={(e) => setMa(e.target.value.toUpperCase())}
+                placeholder="AB12CD"
+                maxLength={8}
+                autoCapitalize="characters"
+                autoCorrect="off"
+              />
+            </label>
+          </div>
+          <Nut rong onClick={vaoSan} disabled={!sanSang}>
+            Vào sân
+          </Nut>
+        </GiayDo>
+
+        <div className="canh-giua day">
+          <Nut vat="mo" dat onClick={() => navigate('/tutorial')}>
+            Chơi thử một mình →
+          </Nut>
+          {!connected && (
+            <p style={{ marginTop: 12 }}>
+              <span className="loi-nhac">Đang chạy ra sân…</span>
+            </p>
+          )}
+          <p className="dan-nho chu-dat" style={{ marginTop: 14 }}>
+            Cần ít nhất hai đứa. Mở chung một link là chơi được ngay.
+          </p>
         </div>
       </div>
-
-      <button className="link-btn" onClick={() => navigate('/tutorial')}>
-        Chơi thử một mình (hướng dẫn 60 giây) →
-      </button>
-
-      {!connected && <p className="home__status">Đang kết nối tới máy chủ…</p>}
-
-      <footer className="home__foot">
-        <p>Cần 2–8 người. Mở link cùng nhau là chơi được ngay.</p>
-      </footer>
     </main>
   );
 }

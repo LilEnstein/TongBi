@@ -21,20 +21,21 @@ import { Scene } from '../three/Scene.js';
 import { MarblePicker } from '../ui/MarblePicker.js';
 import { GuessPanel } from '../ui/GuessPanel.js';
 import { ResultPanel } from '../ui/ResultPanel.js';
-import { Button } from '../ui/common.js';
+import { Nut } from '../ui/common.js';
 import type { RevealCue } from '../net/store.js';
 
 const ME = 'you';
 const BOT = 'bot';
 const SETTINGS = { ...DEFAULT_SETTINGS, totalRounds: 3, winRule: WinRule.CLOSEST, selectSeconds: 0 };
 
-const STEP_HINT: Partial<Record<GamePhase, string>> = {
-  ROUND_START: 'Mỗi người có 10 viên bi. Bắt đầu nào!',
-  SELECT_MARBLES: 'Chọn số bi bỏ vào lòng bàn tay rồi nắm lại. Máy cũng đang chọn bi của nó.',
-  CLOSE_HAND: 'Hai bàn tay đã nắm. Không ai biết trong tay người kia có bao nhiêu viên.',
-  GUESS_TOTAL: 'Giờ đoán TỔNG số bi của cả hai bàn tay — cả của bạn lẫn của máy.',
-  REVEAL: 'Mở tay ra và cộng lại!',
-  ROUND_RESULT: 'Đoán gần đúng nhất thì ăn bi của phe kia.',
+/** Lời chỉ của thằng bạn ngồi cạnh, không phải hướng dẫn sử dụng (§14). */
+const LOI_CHI: Partial<Record<GamePhase, string>> = {
+  ROUND_START: 'Mỗi đứa mười viên. Ngồi xuống đi.',
+  SELECT_MARBLES: 'Bốc mấy viên bỏ vào tay rồi nắm lại. Nó cũng đang giấu đấy.',
+  CLOSE_HAND: 'Hai nắm tay chặt rồi. Không ai biết trong tay đứa kia mấy viên.',
+  GUESS_TOTAL: 'Giờ đoán tổng bi của cả hai nắm tay — cả của bạn lẫn của nó.',
+  REVEAL: 'Mở tay ra, đếm lại!',
+  ROUND_RESULT: 'Đứa nào đoán gần hơn thì ôm bi của đứa kia.',
 };
 
 function makePlayer(id: string, name: string, avatar: string, seat: number, marbles: number): Player {
@@ -189,9 +190,15 @@ export function Tutorial() {
     go(GamePhase.ROUND_START);
   };
 
+  // Khung giờ đổi theo phase như bản nhiều người — art direction §2.
+  const gio =
+    phase === GamePhase.GUESS_TOTAL || phase === GamePhase.REVEAL || phase === GamePhase.ROUND_RESULT
+      ? '12h'
+      : '10h';
+
   return (
-    <main className="game">
-      <div className="game__scene">
+    <main className="san-choi" data-gio={gio}>
+      <div className="canh">
         <Scene
           room={room}
           localPlayerId={ME}
@@ -202,19 +209,26 @@ export function Tutorial() {
         />
       </div>
 
-      <div className="hud">
-        <div className="hud__top">
-          <span className="hud__round">
-            Hướng dẫn · vòng {round}/{SETTINGS.totalRounds}
+      <div className="nang" aria-hidden />
+      {phase === GamePhase.REVEAL && <div className="tia-nang" aria-hidden />}
+
+      <div className="liep-tren">
+        <div className="liep">
+          <span className="vong so">
+            chơi thử · vòng {round}/{SETTINGS.totalRounds}
           </span>
-          <button className="link-btn" onClick={() => navigate('/')}>
-            Thoát
-          </button>
+          <Nut vat="mo" co="sm" onClick={() => navigate('/')}>
+            Về nhà
+          </Nut>
         </div>
       </div>
 
-      <div className="game__panel">
-        {STEP_HINT[phase] && <div className="coach">{STEP_HINT[phase]}</div>}
+      <div className="tay-cam">
+        {LOI_CHI[phase] && (
+          <p className="canh-giua" style={{ margin: 0 }}>
+            <span className="loi-nhac">{LOI_CHI[phase]}</span>
+          </p>
+        )}
 
         {phase === GamePhase.SELECT_MARBLES && (
           <MarblePicker
@@ -245,9 +259,9 @@ export function Tutorial() {
         {phase === GamePhase.ROUND_RESULT && result && (
           <>
             <ResultPanel result={result} teams={teams} players={players} myTeamId={`t-${ME}`} />
-            <Button full onClick={nextRound}>
-              {round >= SETTINGS.totalRounds ? 'Xong! Tạo phòng chơi với bạn bè' : 'Vòng tiếp theo'}
-            </Button>
+            <Nut vat="la" co="lg" rong onClick={nextRound}>
+              {round >= SETTINGS.totalRounds ? 'Xong rồi — rủ tụi nó chơi thật' : 'Vòng sau'}
+            </Nut>
           </>
         )}
       </div>
