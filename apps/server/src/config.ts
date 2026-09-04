@@ -20,9 +20,29 @@ function int(raw: string | undefined, fallback: number, lo: number, hi: number):
   return Math.min(hi, Math.max(lo, Math.round(n)));
 }
 
+/** Các giá trị trong CLIENT_ORIGIN bị bỏ vì không phải origin hợp lệ. */
+const originsBoQua: string[] = [];
+
+/** Một origin hợp lệ trông như `https://abc.xyz` hoặc `http://localhost:5173`. */
+function laOrigin(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return (u.protocol === 'http:' || u.protocol === 'https:') && u.host !== '';
+  } catch {
+    return false;
+  }
+}
+
 /**
  * `CORS_ORIGIN` là tên cũ của biến này; giữ lại để deploy hiện có không gãy.
  * `*` nghĩa là cho phép mọi origin — chỉ nên dùng ở local/preview.
+ *
+ * Giá trị không phải origin (ví dụ ai đó gõ nhầm một dãy số vào ô env trên
+ * dashboard) bị BỎ chứ không được nhận. Trước đây một giá trị rác sẽ thành
+ * origin duy nhất được phép, tức là socket.io từ chối mọi trình duyệt thật và
+ * cả sân im lặng không vào được — sập production mà log vẫn báo "listening".
+ * Bỏ hết thì lùi về `*` (đúng như render.yaml ghi cho trường hợp để trống) và
+ * `describeConfig()` in ra cảnh báo để người deploy biết mà sửa.
  */
 function parseOrigins(raw: string | undefined): string[] | '*' {
   const value = (raw ?? '').trim();
@@ -31,7 +51,12 @@ function parseOrigins(raw: string | undefined): string[] | '*' {
     .split(',')
     .map((o) => o.trim().replace(/\/+$/, ''))
     .filter(Boolean);
-  return list.length > 0 ? list : '*';
+  const hopLe = list.filter((o) => {
+    if (laOrigin(o)) return true;
+    originsBoQua.push(o);
+    return false;
+  });
+  return hopLe.length > 0 ? hopLe : '*';
 }
 
 export const config = {
@@ -58,12 +83,18 @@ export function allowedOrigin(requestOrigin: string | undefined): string {
 
 export function describeConfig(): string {
   const origins = config.origins === '*' ? '*' : config.origins.join(', ');
-  return [
+  const dong = [
     `port=${config.port}`,
     `host=${config.host}`,
     `origins=${origins}`,
     `maxPlayersPerRoom=${config.maxPlayersPerRoom}`,
     `roomTtl=${Math.round(config.roomTtlMs / 60_000)}m`,
     `env=${config.nodeEnv}`,
-  ].join(' ');
+  ];
+  if (originsBoQua.length > 0) {
+    dong.push(
+      `CANH-BAO=CLIENT_ORIGIN có giá trị không phải origin, đã bỏ: ${originsBoQua.join(', ')}`,
+    );
+  }
+  return dong.join(' ');
 }

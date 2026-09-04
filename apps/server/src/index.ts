@@ -352,7 +352,7 @@ function handleHttp(req: IncomingMessage, res: ServerResponse): void {
     }, origin);
   }
 
-  if (existsSync(WEB_DIST)) return serveStatic(url.pathname, res);
+  if (existsSync(WEB_DIST)) return serveStatic(url.pathname, req, res);
 
   json(res, 404, { ok: false, error: 'Not found' }, origin);
 }
@@ -371,18 +371,77 @@ const MIME: Record<string, string> = {
   '.mp3': 'audio/mpeg',
 };
 
-/** Phục vụ SPA đã build; mọi route không phải file đều trả về index.html. */
-function serveStatic(pathname: string, res: ServerResponse): void {
+/**
+ * Đọc header `Range`. Chỉ hỗ trợ một khoảng — `bytes=a-b`, `bytes=a-`,
+ * `bytes=-n` — đúng bằng nhu cầu của thẻ `<audio>`/`<video>`.
+ *
+ * Trả `null` khi không có Range (hoặc cú pháp lạ, khi đó cứ trả cả file như
+ * bình thường), `'sai'` khi khoảng nằm ngoài file (phải đáp 416).
+ */
+function docRange(raw: string | undefined, size: number): { tu: number; den: number } | 'sai' | null {
+  if (!raw) return null;
+  const khop = /^bytes=(\d*)-(\d*)$/.exec(raw.trim());
+  if (!khop) return null;
+  const a = khop[1];
+  const b = khop[2];
+  if (!a && !b) return null;
+
+  let tu: number;
+  let den: number;
+  if (!a) {
+    // `bytes=-n`: n byte cuối file.
+    const n = Number(b);
+    if (!Number.isFinite(n) || n <= 0) return 'sai';
+    tu = Math.max(0, size - n);
+    den = size - 1;
+  } else {
+    tu = Number(a);
+    den = b ? Number(b) : size - 1;
+  }
+  if (!Number.isFinite(tu) || !Number.isFinite(den)) return null;
+  if (tu > den || tu >= size) return 'sai';
+  return { tu, den: Math.min(den, size - 1) };
+}
+
+/**
+ * Phục vụ SPA đã build; mọi route không phải file đều trả về index.html.
+ *
+ * Có hỗ trợ Range vì từ khi có nhạc nền, thư mục dist mang một file mp3 4,5 MB:
+ * Safari trên iOS chỉ phát `<audio>` khi server biết đáp 206 theo Range, trả
+ * 200 kèm cả file thì nó lặng thinh. Trước đây dist chỉ có js/css/ảnh nhỏ nên
+ * không cần.
+ */
+function serveStatic(pathname: string, req: IncomingMessage, res: ServerResponse): void {
   const rel = normalize(decodeURIComponent(pathname)).replace(/^([/\\])+/, '');
   let file = join(WEB_DIST, rel);
   if (!file.startsWith(WEB_DIST)) file = join(WEB_DIST, 'index.html');
   if (!existsSync(file) || statSync(file).isDirectory()) file = join(WEB_DIST, 'index.html');
   if (!existsSync(file)) return json(res, 404, { ok: false, error: 'Not found' });
 
-  res.writeHead(200, {
+  const size = statSync(file).size;
+  const chung: Record<string, string | number> = {
     'Content-Type': MIME[extname(file)] ?? 'application/octet-stream',
     'Cache-Control': file.includes('assets') ? 'public, max-age=31536000, immutable' : 'no-cache',
-  });
+    'Accept-Ranges': 'bytes',
+  };
+
+  const khoang = docRange(req.headers.range, size);
+  if (khoang === 'sai') {
+    res.writeHead(416, { ...chung, 'Content-Range': `bytes */${size}` });
+    res.end();
+    return;
+  }
+  if (khoang) {
+    res.writeHead(206, {
+      ...chung,
+      'Content-Range': `bytes ${khoang.tu}-${khoang.den}/${size}`,
+      'Content-Length': khoang.den - khoang.tu + 1,
+    });
+    createReadStream(file, { start: khoang.tu, end: khoang.den }).pipe(res);
+    return;
+  }
+
+  res.writeHead(200, { ...chung, 'Content-Length': size });
   createReadStream(file).pipe(res);
 }
 
