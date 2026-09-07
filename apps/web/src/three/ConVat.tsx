@@ -562,6 +562,8 @@ const TAY_REACH = 0.62;
 const CANH_TAY_GOC = 0.3;
 
 const tmp = new Vector3();
+/** Trục mà capsule cánh tay nằm theo, sau khi group trong đã xoay `NAM`. */
+const TRUC_Z = new Vector3(0, 0, 1);
 
 export function ConVat({
   loai,
@@ -594,7 +596,7 @@ export function ConVat({
   const momRef = useRef<Group>(null);
 
   // Trạng thái đã làm mượt, giữ ngoài React để không tạo render nào.
-  const d = useMemo(() => ({ nghieng: 0.05, cao: 0, nhun: 0, dau: 0 }), []);
+  const d = useMemo(() => ({ nghieng: 0.05, cao: 0, nhun: 0, dau: 0, dap: 0 }), []);
   // Lệch pha theo người chơi: cả sân thở cùng nhịp thì trông như đồ chơi dây.
   const lech = useMemo(() => ((Math.abs(seed) % 100) / 100) * 6.28, [seed]);
   const nhipQuirk = useMemo(() => 5.5 + (Math.abs(seed) % 7) * 0.9, [seed]);
@@ -608,20 +610,29 @@ export function ConVat({
    */
   const donDt = useRef(0);
   // Vai mọc ở mép trái thân, ngang tầm hai phần ba chiều cao thân.
-  const vai = useMemo<[number, number, number]>(
-    () => [-ch.than * 0.46, 0.16 + ch.cao * 0.74, 0.72 - ch.than * 0.34],
+  /* Vai trong hệ toạ độ của `than`, TRƯỚC khi ngực xoay. Trước đây đây là một
+     hằng số trong hệ `goc` đã cộng sẵn offset [0, 0.16, 0.72] của `than` — tức
+     là tính với giả định ngực không bao giờ xoay. Nhưng `than.rotation.x` đổi
+     mỗi frame theo tư thế, còn `canhTay` lại là con của `goc` chứ không phải
+     con của `than`, nên gốc cánh tay đứng im trong lúc cái vai bằng thịt xoay
+     đi: 8/10 con có đầu capsule cánh tay chuyển từ chìm trong lồng ngực sang
+     thò hẳn ra ngoài da trong lúc chuyển tư thế. Giờ xoay lại mỗi frame. */
+  const vaiCucBo = useMemo<[number, number, number]>(
+    () => [-ch.than * 0.46, ch.cao * 0.74, -ch.than * 0.34],
     [ch.than, ch.cao],
   );
 
   useFrame((_, dt) => {
-    if (chiTiet === 'thap') {
-      donDt.current += dt;
-      if (donDt.current < 0.05) return;
-    }
-    // Bỏ frame thì phải làm mượt bằng đúng khoảng thời gian đã dồn lại, nếu
-    // không animation sẽ chậm đi theo tỉ lệ số frame bị bỏ.
-    const step = Math.min(donDt.current || dt, 0.1);
-    donDt.current = 0;
+    /* Cổng LOD chia làm hai tầng.
+       Trước đây `return` sớm chặn TOÀN BỘ hàm, nên ở sân đông cả tư thế lẫn
+       cánh tay cũng chỉ cập nhật 20Hz. Hai thứ đó thì không được: tư thế là
+       silhouette mà mắt bám theo lúc đổi phase, còn cánh tay phải bám 60Hz vì
+       `Hand` damp `drive` mỗi frame không hề có cổng LOD — cánh tay chạy chậm
+       hơn là vai rời khỏi cổ tay. Chỉ tai/đuôi/mắt mới đáng cắt. */
+    const step = Math.min(dt, 0.1);
+    donDt.current += dt;
+    const nang = chiTiet !== 'thap' || donDt.current >= 0.05;
+    if (nang) donDt.current = 0;
     const t = Date.now() / 1000;
     const dich = DANG[tuThe];
 
@@ -633,26 +644,37 @@ export function ConVat({
     // Vừa bị chạm vào thì ngẩng lên, nhún một cái rồi trở lại (§ tương tác).
     const cham = chamLuc === null ? 9 : (Date.now() - chamLuc) / 1000;
     const dapLai = cham < 1.2 ? Math.max(0, 1 - cham / 1.2) : 0;
+    /* Phải đi qua damp như bốn đại lượng tư thế, không được dùng thẳng: lúc bị
+       chạm `dapLai` nhảy 0→1 trong một frame, đầu xoay 24° trong 16ms — mắt đọc
+       ra là teleport chứ không phải chuyển động. λ=22 cho thời gian lên ~40ms
+       (2-3 frame) mà vẫn giữ được ~87% biên độ. Damp cũng tự lo luôn trường hợp
+       chạm chồng chạm, thứ mà envelope theo thời gian sẽ làm pop ngược. */
+    d.dap = damp(d.dap, dapLai, 22, step);
 
     // Hơi thở — biên độ rất nhỏ nhưng là thứ làm con vật trông còn sống.
     const tho = Math.sin(t * 1.55 + lech);
+    /* Góc ngực phải tính MỘT LẦN rồi dùng chung cho cả `than.rotation.x` lẫn
+       điểm gắn vai. Nếu chỉ xoay vai theo `d.nghieng` mà bỏ vế `d.dap` thì lúc
+       bị chạm, ngực giật đi tới 58mm trong 2-3 frame còn gốc cánh tay đứng im —
+       đổi một cú trượt 0,6s lấy một cú pop, tệ hơn. */
+    const gocThan = d.nghieng + tho * 0.018 - d.dap * 0.18;
     // Nhịp tật riêng: chạy 0.7s trong mỗi chu kỳ `nhipQuirk` giây.
     const chuKy = (t + lech) % nhipQuirk;
     const q = chuKy < 0.7 ? Math.sin((chuKy / 0.7) * Math.PI) : 0;
 
     if (goc.current) {
       goc.current.position.y =
-        d.cao + Math.abs(Math.sin(t * 7.5)) * d.nhun * 0.09 + dapLai * 0.05;
+        d.cao + Math.abs(Math.sin(t * 7.5 + lech)) * d.nhun * 0.09 + d.dap * 0.05;
     }
     if (than.current) {
-      than.current.rotation.x = d.nghieng + tho * 0.018 - dapLai * 0.18;
+      than.current.rotation.x = gocThan;
       than.current.scale.set(1 + tho * 0.015, 1 + tho * 0.022, 1 + tho * 0.015);
       than.current.rotation.z = ch.quirk === 'nhun-nhay' ? q * 0.12 : 0;
     }
     if (dau.current) {
       // Đầu trễ hơn thân một nhịp, nên chồm tới là đầu ngật ra sau rồi mới theo.
       dau.current.rotation.x =
-        d.dau + tho * 0.03 - dapLai * 0.42 + (ch.quirk === 'mo-thuc' ? q * 0.7 : 0);
+        d.dau + tho * 0.03 - d.dap * 0.42 + (ch.quirk === 'mo-thuc' ? q * 0.7 : 0);
       dau.current.rotation.y =
         Math.sin(t * 0.42 + lech) * 0.14 +
         (ch.quirk === 'rung-rau' ? Math.sin(t * 22) * q * 0.05 : 0);
@@ -667,40 +689,51 @@ export function ConVat({
       const hit = ch.quirk === 'hit' ? 1 + q * 0.18 : 1;
       momRef.current.scale.set(hit, hit, hit);
     }
-    if (dongTai) {
-      const vay = Math.sin(t * 2.1 + lech) * 0.1 + dapLai * 0.4;
-      if (taiTrai.current) taiTrai.current.rotation.z = vay;
-      if (taiPhai.current) taiPhai.current.rotation.z = -vay;
+    // Phần phụ: chi tiết nhỏ ở rìa silhouette, cắt xuống 20Hz thì không ai thấy.
+    if (nang) {
+      if (dongTai) {
+        const vay = Math.sin(t * 2.1 + lech) * 0.1 + d.dap * 0.4;
+        if (taiTrai.current) taiTrai.current.rotation.z = vay;
+        if (taiPhai.current) taiPhai.current.rotation.z = -vay;
+      }
+      if (duoi.current) {
+        const manh = ch.quirk === 'vay-duoi' ? 0.42 + q * 0.5 : 0.2;
+        duoi.current.rotation.y = Math.sin(t * 1.7 + lech) * manh;
+        duoi.current.rotation.x = ch.quirk === 'phap-mang' ? q * 0.2 : 0;
+      }
+      // Nháy mắt: khép rất nhanh, chu kỳ lệch nhau giữa các con.
+      const nhay = (t * 0.24 + lech) % 1 > 0.972 ? 0.12 : 1;
+      if (matTrai.current) matTrai.current.scale.y = nhay;
+      if (matPhai.current) matPhai.current.scale.y = nhay;
     }
-    if (duoi.current) {
-      const manh = ch.quirk === 'vay-duoi' ? 0.42 + q * 0.5 : 0.2;
-      duoi.current.rotation.y = Math.sin(t * 1.7 + lech) * manh;
-      duoi.current.rotation.x = ch.quirk === 'phap-mang' ? q * 0.2 : 0;
-    }
-    // Nháy mắt: khép rất nhanh, chu kỳ lệch nhau giữa các con.
-    const nhay = (t * 0.24 + lech) % 1 > 0.972 ? 0.12 : 1;
-    if (matTrai.current) matTrai.current.scale.y = nhay;
-    if (matPhai.current) matPhai.current.scale.y = nhay;
 
     // ── Cánh tay nối vai với cổ tay của bàn tay ──
     // Đọc chính `drive` mà bàn tay đang làm mượt, nên vai và tay không rời nhau.
     if (canhTay.current && xuongTay.current) {
-      const wx = 0;
+      // Bàn tay dịch ngang khi lắc/quệt (Hand ghi vào drive.x); bỏ qua trục này
+      // thì ống tay áo trượt đi còn cánh tay đứng im, cánh tay lòi ra khỏi ống.
+      // Xoay điểm gắn vai theo đúng góc ngực, quanh pivot của `than`.
+      const cs = Math.cos(gocThan);
+      const sn = Math.sin(gocThan);
+      const vaiX = vaiCucBo[0];
+      const vaiY = 0.16 + vaiCucBo[1] * cs - vaiCucBo[2] * sn;
+      const vaiZ = 0.72 + vaiCucBo[1] * sn + vaiCucBo[2] * cs;
+
+      const wx = drive.x * tyLeTay;
       const wy = (TAY_Y + drive.lift * TAY_LIFT) * tyLeTay;
       const wz = (TAY_Z - drive.reach * TAY_REACH) * tyLeTay;
-      const dx = wx - vai[0];
-      const dy = wy - vai[1];
-      const dz = wz - vai[2];
+      const dx = wx - vaiX;
+      const dy = wy - vaiY;
+      const dz = wz - vaiZ;
       const len = Math.max(0.08, Math.hypot(dx, dy, dz));
-      canhTay.current.position.set(vai[0] + dx / 2, vai[1] + dy / 2, vai[2] + dz / 2);
-      // Ma trận world phải cập nhật trước khi lookAt, vì position vừa đổi.
-      canhTay.current.updateWorldMatrix(true, false);
-      const parent = canhTay.current.parent;
-      if (parent) {
-        tmp.set(wx, wy, wz);
-        parent.localToWorld(tmp);
-        canhTay.current.lookAt(tmp);
-      }
+      canhTay.current.position.set(vaiX + dx / 2, vaiY + dy / 2, vaiZ + dz / 2);
+      /* Quay thẳng bằng quaternion thay vì lookAt. `canhTay` là con trực tiếp
+         của `goc`, mà `vai` lẫn cổ tay đều đã ở hệ toạ độ đó, nên vòng
+         updateWorldMatrix + localToWorld chỉ để đi ra world rồi quay về là thừa.
+         Kết quả hình học giống hệt: lookAt của object thường cũng quay +Z về
+         đích, và capsule bên trong đã nằm theo +Z nhờ `NAM`. Trục xoay quanh
+         thân capsule không ảnh hưởng gì vì nó đối xứng tròn. */
+      canhTay.current.quaternion.setFromUnitVectors(TRUC_Z, tmp.set(dx, dy, dz).normalize());
       xuongTay.current.scale.y = len / CANH_TAY_GOC;
     }
   });

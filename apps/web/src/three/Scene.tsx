@@ -207,6 +207,10 @@ function CameraRig({
   const dangKeo = useRef(false);
   const fov = useRef(46);
   const nghieng = useRef(0);
+  /* Độ nghiêng đã làm mượt, phải giữ ngoài camera. `lookAt` ghi lại toàn bộ
+     rotation mỗi frame nên không thể dùng chính `camera.rotation.z` làm trạng
+     thái tích luỹ — xem chú thích ở chỗ áp roll bên dưới. */
+  const roll = useRef(0);
   const lechKhung = useRef(0.12);
   const bao = useRef(onXoay);
   bao.current = onXoay;
@@ -355,7 +359,16 @@ function CameraRig({
     // Panel giấy dó chiếm nửa dưới màn hình (§15), nên hạ tầm nhìn xuống một
     // chút để vòng tròn và các nắm tay nằm gọn trong khoảng còn nhìn thấy.
     camera.rotateX(-lechKhung.current);
-    camera.rotation.z += (nghieng.current - camera.rotation.z) * k;
+    /* Roll (nghiêng khung kiểu dutch tilt) phải tích luỹ trong ref rồi áp một
+       lần, KHÔNG được viết `camera.rotation.z += (đích - camera.rotation.z) * k`.
+       Lý do: `lookAt` ngay trên đã ghi lại rotation, nên `camera.rotation.z`
+       luôn xấp xỉ 0 khi đọc ở đây — phép "+=" đó không tiến dần qua các frame mà
+       chỉ ra `đích * k` mỗi frame. Với k = 1 − exp(−2.4·dt), ở 60fps là 3,9% độ
+       nghiêng mong muốn, ở 30fps là 7,7% — vừa gần như mất hẳn hiệu ứng vừa
+       thay đổi theo framerate. `rotateZ` cũng đúng hơn `rotation.z` vì nó xoay
+       quanh trục nhìn thật, không ghi đè một thành phần Euler. */
+    roll.current += (nghieng.current - roll.current) * k;
+    camera.rotateZ(roll.current);
     const cam = camera as TPerspectiveCamera;
     if (Math.abs(cam.fov - fov.current) > 0.05) {
       cam.fov += (fov.current - cam.fov) * k;

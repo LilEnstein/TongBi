@@ -158,6 +158,7 @@ export function PlayerSeat({
 }: SeatProps) {
   const submitted = round?.submitted ?? false;
   const submittedAt = useRef<number | null>(null);
+  const dauMuc = useRef<HTMLDivElement>(null);
 
   // Ghi lại thời điểm người này chốt bi để chạy chuỗi "bi bay vào tay → nắm tay".
   useEffect(() => {
@@ -177,6 +178,18 @@ export function PlayerSeat({
     () => player.id.split("").reduce((a, c) => a + c.charCodeAt(0), 0),
     [player.id],
   );
+
+  /* Dấu mực hiện dần trong 260ms. Trước đây opacity tính lúc React render nên
+     nó phụ thuộc `useAnimationTick` 12Hz — 260ms chỉ được ~3 mẫu, tức không mờ
+     dần mà nhảy 3 bậc. Ghi thẳng vào style trong useFrame thì được ~16 mẫu.
+     Ngừng ghi khi đã hiện hẳn để không đụng DOM vô ích 30 ghế mỗi frame. */
+  useFrame(() => {
+    const el = dauMuc.current;
+    if (!el || openHandAt === null) return;
+    const v = smoothstep(0, 260, Date.now() - openHandAt);
+    if (v >= 1 && el.style.opacity === '1') return;
+    el.style.opacity = String(v);
+  });
 
   // ── Ánh xạ phase → tư thế tay ──
   const now = Date.now();
@@ -264,7 +277,7 @@ export function PlayerSeat({
    * Trạng thái tay đã làm mượt. Bàn tay ghi vào nó, con vật đọc ra để nối cánh
    * tay vào cổ tay — nhờ vậy vai và tay không bao giờ rời nhau dù ai chậm frame.
    */
-  const drive = useMemo<HandDrive>(() => ({ curl, reach, lift }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const drive = useMemo<HandDrive>(() => ({ curl, reach, lift, x: 0 }), []); // eslint-disable-line react-hooks/exhaustive-deps
   /**
    * Khung cận đứng trong lòng vòng nên chỗ ngồi nào cũng có thể chỉ cách camera
    * một đơn vị; `distanceFactor` của Html khi đó phóng nhãn lên gấp mấy lần,
@@ -391,10 +404,7 @@ export function PlayerSeat({
           zIndexRange={[3, 0]}
           pointerEvents="none"
         >
-          <div
-            className="dau-muc so"
-            style={{ opacity: smoothstep(0, 260, now - (openHandAt ?? now)) }}
-          >
+          <div ref={dauMuc} className="dau-muc so" style={{ opacity: 0 }}>
             {knownMarbles}
           </div>
         </Html>

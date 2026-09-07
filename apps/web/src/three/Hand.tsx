@@ -26,9 +26,16 @@ export interface HandDrive {
   reach: number;
   /** Nâng tay lên khi reo hò. */
   lift: number;
+  /** Dịch ngang do cử chỉ lắc tay / quệt quần. Con vật đọc để nối cánh tay. */
+  x: number;
 }
 
-interface HandProps extends HandDrive {
+/**
+ * `x` bị loại khỏi props: curl/reach/lift là đầu vào người gọi truyền xuống,
+ * còn `x` là thứ Hand tự suy ra từ `cuChi` rồi công bố qua `drive` cho con vật
+ * đọc. Nó chỉ đi một chiều ra ngoài, không phải một prop.
+ */
+interface HandProps extends Omit<HandDrive, 'x'> {
   /**
    * Trạng thái đã làm mượt, dùng chung với con vật đang cầm bàn tay này.
    * Bàn tay là nơi duy nhất ghi vào nó; con vật chỉ đọc để nối cánh tay vào
@@ -146,6 +153,41 @@ function Ngon({
   );
 }
 
+/** Biên độ và pha của một cử chỉ tuần hoàn. Giữ ngoài React, một bản mỗi tay. */
+export interface NhipCuChi {
+  bien: number;
+  pha: number;
+}
+
+/**
+ * Một cử chỉ lặp (lắc tay, quệt quần) bật/tắt mà không pop.
+ *
+ * Trước đây cử chỉ là `Math.sin(Date.now()/1000 * 13) * 0.09` — pha tuyệt đối,
+ * không liên quan tới lúc cử chỉ bắt đầu. Đúng frame server đổi phase, hàm sin
+ * đang ở pha bất kỳ nên nắm tay nhảy ngang tới 0,0675 đơn vị (~37% bề ngang
+ * lòng bàn tay) rồi mới bắt đầu lắc, và giật ngược về giữa khi cử chỉ tắt.
+ *
+ * Cách sửa: biên độ đi qua damp còn pha tự tích luỹ từ 0. Bật thì biên bò từ 0
+ * lên nên xuất phát đúng ở giữa; tắt thì biên tụt về 0 còn sin vẫn chạy, lắc
+ * nhỏ dần rồi hết. Tần số và biên độ đỉnh không đổi — chỉ cái bao ngoài mềm đi.
+ * Tắt dùng λ lớn hơn bật để dư âm không kéo sang phase sau.
+ */
+export function nhipCuChi(s: NhipCuChi, bat: boolean, tanSo: number, step: number): number {
+  // Tắt hẳn thì về đúng 0 và ĐỨNG pha lại. Nếu để pha tự tiến trong lúc tắt
+  // thì lần bật sau xuất phát ở một pha bất kỳ — vẫn còn 6% biên, tức vẫn còn
+  // một cú nhảy nhỏ. Đứng pha thì frame đầu của lần bật là sin(0) = 0 tuyệt đối.
+  if (!bat && s.bien < 0.002) {
+    s.bien = 0;
+    s.pha = 0;
+    return 0;
+  }
+  s.bien = damp(s.bien, bat ? 1 : 0, bat ? 10 : 13, step);
+  // Lấy mẫu ở pha hiện tại rồi mới tiến, để frame đầu tiên đọc đúng pha 0.
+  const ra = Math.sin(s.pha) * s.bien;
+  s.pha += step * tanSo;
+  return ra;
+}
+
 /** Ngón trẻ con gần bằng nhau, không thon dài như tay người lớn. */
 const NGON = [
   { x: -0.096, len: 0.25, w: 0.035, z: -0.004, muc: true }, // trỏ
@@ -176,7 +218,8 @@ export function Hand({
   const thumbJ2 = useRef<Group>(null);
   const palmContent = useRef<Group>(null);
   // Đối tượng dùng chung, được Hand làm mượt mỗi frame và mọi khớp đọc lại.
-  const driveRieng = useMemo(() => ({ curl, reach, lift }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const driveRieng = useMemo(() => ({ curl, reach, lift, x: 0 }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const nhip = useMemo(() => ({ lac: { bien: 0, pha: 0 }, quet: { bien: 0, pha: 0 } }), []);
   const drive = driveNgoai ?? driveRieng;
 
   useFrame((_, dt) => {
@@ -186,16 +229,20 @@ export function Hand({
     // Hé nắm tay tự nhìn trộm bi của chính mình — clip `peek` (§9.1).
     const homNay = cuChi === 'nhin-trom' ? Math.max(0, Math.sin(t * 0.9)) * 0.22 : 0;
     // Lắc nắm tay trêu đối thủ — clip `shake_fist`.
-    const lac = cuChi === 'lac-tay' ? Math.sin(t * 13) * 0.09 : 0;
+    const lac = nhipCuChi(nhip.lac, cuChi === 'lac-tay', 13, step) * 0.09;
     // Quệt tay vào quần trước khi bốc bi — clip `wipe_dirt`.
-    const quet = cuChi === 'quet-quan' ? Math.sin(t * 6) * 0.06 : 0;
+    const quet = nhipCuChi(nhip.quet, cuChi === 'quet-quan', 6, step) * 0.06;
 
+    // Ghi vào drive rồi mới đọc lại, không tính `lac + quet` ở hai nơi: con vật
+    // đọc chính giá trị này để nối cánh tay, hai biểu thức song song sẽ trôi
+    // khỏi nhau ngay lần đầu có ai sửa cử chỉ.
+    drive.x = lac + quet;
     drive.curl = damp(drive.curl, Math.max(0, curl - homNay), 9, step);
     drive.reach = damp(drive.reach, reach, 7, step);
     drive.lift = damp(drive.lift, lift, 6, step);
 
     if (root.current) {
-      root.current.position.x = lac + quet;
+      root.current.position.x = drive.x;
       root.current.position.z = -drive.reach * 0.62;
       root.current.position.y = 0.3 + drive.lift * 0.45;
       // Nắm tay thì hơi ngửa cổ tay để cả vòng thấy rõ nắm đấm.
