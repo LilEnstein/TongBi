@@ -55,6 +55,7 @@ export function Home() {
       <LaTreRoi />
 
       <header className="mai">
+        <img className="dau-hieu" src="/logo.webp" alt="" width={96} height={96} />
         <h1 className="hieu" data-chu="TỔNG BI">
           TỔNG BI
         </h1>

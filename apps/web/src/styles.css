@@ -179,6 +179,17 @@ input {
   mask-repeat: repeat-x;
 }
 
+/* Dấu hiệu: nắm tay giấu bi trong vòng tròn vạch trên đất, khắc gỗ dân gian.
+   Đặt trên chữ chứ không cạnh chữ — ở khổ dọc điện thoại thì xếp ngang sẽ
+   ép cả hai nhỏ lại. */
+.dau-hieu {
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 2px;
+  object-fit: contain;
+}
+
 .hieu {
   position: relative;
   display: inline-block;
