@@ -83,6 +83,12 @@ bóng là khối cứng lệch 4px chứ không phải bóng mờ.
 màn hình chơi, đổi tint của lớp `.nang` và hướng/màu mặt trời trong scene 3D — không
 phải dựng lại cảnh.
 
+**Khung cảnh theo buổi và mùa (§20).** Tầng bên trên nhịp ánh sáng: cùng một sân ấy nhưng
+là sáng hay đêm trăng, mùa xuân hay mùa đông. Mặc định lấy theo đồng hồ và tháng của máy
+người chơi, chọn tay được bằng nút ở góc phải dưới. Buổi/mùa **không ghi đè** ánh sáng của
+phase, nó chỉ nhân cường độ và pha màu, nên §2 vẫn kể được câu chuyện của nó. Đây cũng là
+lựa chọn riêng của từng người, không phải trạng thái phòng — không gửi lên server.
+
 Toàn bộ model 3D vẫn được dựng bằng code, không cần file GLB/GLTF nào:
 
 - **Bàn tay trẻ con có rig** (`apps/web/src/three/Hand.tsx`) — 4 ngón × 3 đốt + ngón cái
@@ -107,6 +113,10 @@ Toàn bộ model 3D vẫn được dựng bằng code, không cần file GLB/GLT
 [docs/tong_bi_prompt_nen_gemini.md](docs/tong_bi_prompt_nen_gemini.md)) chưa có; các màn
 hình đã mang sẵn mã trang `man-p01` / `man-p02` / `man-p03` và `styles.css` có sẵn khối
 hướng dẫn gắn ảnh. Chưa có ảnh thì gradient tông đất đã đúng màu (§17.3).
+
+Bộ prompt sinh nền cho tám khung cảnh (sáng/đêm × bốn mùa) và sprite tre/cây/bến nước nằm ở
+[docs/tong_bi_prompt_khungcanh_mua.md](docs/tong_bi_prompt_khungcanh_mua.md). Cảnh 3D hiện tại
+dựng hoàn toàn bằng primitive nên chưa cần ảnh nào để chạy.
 
 Muốn thay bằng asset do artist làm (§18 art direction) thì chỉ cần thay `Hand.tsx` /
 `Dice.tsx` bằng model đã rig, phần còn lại không đổi.

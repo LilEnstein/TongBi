@@ -4,9 +4,11 @@ import { Home } from './screens/Home.js';
 import { RoomScreen } from './screens/RoomScreen.js';
 import { Tutorial } from './screens/Tutorial.js';
 import { LaCuonHop, NutTieng } from './ui/common.js';
+import { ChonKhungCanh } from './ui/ChonKhungCanh.js';
 import { wireSocket } from './net/store.js';
 import { nenSan, unlockAudio } from './audio/sfx.js';
 import { apTuyChonDaLuu, nhacNen, tiengDangBat } from './audio/nhacNen.js';
+import { useKhungCanh } from './lib/khungCanh.js';
 
 export function App() {
   useEffect(() => {
@@ -24,8 +26,12 @@ export function App() {
       }
     };
     window.addEventListener('pointerdown', unlock, { once: true });
+    /* Buổi/mùa để "tự động" thì đọc lại đồng hồ mỗi 5 phút: ván bắt đầu lúc
+       17h55 sẽ tự sang đêm giữa trận, và đêm 30 Tết tự sang mùa xuân. */
+    const dongHo = setInterval(() => useKhungCanh.getState().theoDongHo(), 300_000);
     return () => {
       window.removeEventListener('pointerdown', unlock);
+      clearInterval(dongHo);
       nenSan.dung();
       nhacNen.dung();
     };
@@ -40,6 +46,7 @@ export function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <NutTieng />
+      <ChonKhungCanh />
       <LaCuonHop />
     </BrowserRouter>
   );

@@ -466,6 +466,10 @@ Không bán skin bàn/tay generic. Bán **bối cảnh**:
 - Sân trường giờ ra chơi — nền xi măng, vạch phấn
 - Tết — sân đất có xác pháo, bi đỏ
 
+> **Đã dựng một phần:** tầng buổi (sáng/đêm) và bốn mùa đã có trong game, miễn phí và
+> không cần asset — xem §20. Bán bối cảnh sau này là bán **vùng miền** (bãi biển miền Trung,
+> ruộng bậc thang, sân trường xi măng) chứ không bán lại mùa.
+
 Mỗi bối cảnh đổi cả nền, ambient sound và texture nền đất. Đây là thứ người chơi thật sự muốn khoe.
 
 ---
@@ -498,3 +502,59 @@ Bộ truyện tranh dùng làm tham chiếu cảm hứng là tác phẩm có b�
 - Toàn bộ nhân vật, bàn tay, avatar của Tổng Bi phải là thiết kế gốc.
 
 Các prompt trong file kèm theo đã được viết theo nguyên tắc này: mô tả đặc điểm thị giác thay vì nêu tên tác phẩm. Điều này cũng cho kết quả sinh ảnh tốt hơn, vì mô hình bám vào thuộc tính cụ thể thay vì đoán mò một IP.
+
+---
+
+## 20. Khung cảnh theo buổi và mùa
+
+Tầng bên trên §2. §2 kể một **buổi chiều** (mỗi phase một khung giờ); tầng này quyết định
+đó là buổi chiều của *mùa nào*, hay là một *đêm trăng*.
+
+Nguyên tắc quan trọng nhất: **buổi/mùa không ghi đè nhịp ánh sáng của phase.** Bảng khí
+trời chỉ *nhân* cường độ nắng, *pha* màu nắng và đổi bảng màu đất/lá. Nhờ vậy giữa đêm
+mùa đông thì `GUESS_TOTAL` vẫn là phase sáng gắt nhất của cả ván, hướng bóng vẫn đúng
+khung giờ, và câu chuyện của §2 không bị mất.
+
+### 20.1. Ai chọn
+
+| | Mặc định | Người chơi chọn tay |
+|---|---|---|
+| Buổi | theo đồng hồ máy: 18h–5h là đêm | ban ngày / đêm trăng |
+| Mùa | theo tháng: 2–4 xuân, 5–7 hạ, 8–10 thu, 11–1 đông | xuân / hạ / thu / đông |
+
+Lựa chọn lưu ở `localStorage`, **không** gửi lên server: đây là chuyện của người xem, hai
+đứa trong cùng một phòng được ngồi ở hai mùa khác nhau mà không ảnh hưởng gì tới luật.
+Để "tự động" thì cứ 5 phút đọc lại đồng hồ, nên ván bắt đầu lúc 17h55 sẽ tự sang đêm
+giữa trận.
+
+### 20.2. Mỗi khung cảnh có gì
+
+Luôn có: cánh đồng + bờ ruộng, hai–ba bụi tre, nhà mái tranh.
+
+| | Thêm vào |
+|---|---|
+| Sáng | mây trắng (hè thấp, thu mỏng và cao hơn) |
+| Đêm | trăng thấp + sao, bến nước soi trăng, gió mạnh hơn 25%, đom đóm (chỉ đêm hè và đêm thu) |
+| Xuân | mưa xuân, cây đào nở, cây nêu + dây pháo, xác pháo trên đất; đất nồm nên gần như không bốc bụi |
+| Hạ | nắng gắt nhất, bụi đất nhiều nhất — khung cảnh gốc của §1 |
+| Thu | đồng chín vàng, lá rụng trên đất và còn chao trong không khí, trời xanh và cao |
+| Đông | đồng đã gặt chỉ còn gốc rạ, cây trụi lá, tre vàng và thưa, sương lạnh đọng thấp, nắng nhạt nhất. **Không có tuyết** — rét Bắc Bộ là trời xám và cây trụi, không phải mùa đông ôn đới |
+
+### 20.3. Ba luật của khung cảnh
+
+1. **Không vật đứng nào ở trong lòng vòng người ngồi.** Khung `tay` (§6) đặt camera trong
+   lòng vòng ngoảnh ra nhìn chỗ ngồi, hậu cảnh phải là mảng đất trống. Ngoại lệ duy nhất
+   là hạt bay (mưa, lá, cánh hoa, đom đóm) — mảnh cỡ centimet, và cũng chỉ được bay ngoài
+   vòng người, vì hạt rơi trong vòng là rơi ngay trước ống kính.
+2. **Mọi vị trí tất định.** Cả phòng phải thấy bụi tre ở cùng một chỗ.
+3. **Mọi màu đi qua bảng khí trời.** Không vật nào được phát sáng lạc ra khỏi đêm hay
+   tươi lạc ra khỏi mùa đông.
+
+### 20.4. Ở đâu trong code
+
+`three/troi.ts` (bảng khí trời) · `three/Quanh.tsx` (cả cái làng) · `lib/khungCanh.ts`
+(chọn + lưu) · `ui/ChonKhungCanh.tsx` (nút góc phải dưới) · khối `[data-buoi]` /
+`[data-mua]` trong `styles.css` (tông của các màn 2D) · `test/khungCanh.test.tsx`.
+
+Tất cả dựng bằng primitive, **không thêm một byte asset nào**. Muốn nâng cấp bằng ảnh vẽ
+tay thì bộ prompt nằm ở [tong_bi_prompt_khungcanh_mua.md](tong_bi_prompt_khungcanh_mua.md).

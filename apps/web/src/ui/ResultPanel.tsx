@@ -1,30 +1,75 @@
 /**
- * P10 — Mở tay, đếm bi. Tổng thật nằm giữa mẹt tre, dưới là phe nào đoán bao nhiêu.
+ * P10 — Mở tay, đếm bi. Tổng thật nằm giữa mẹt tre, dưới là bảng xếp hạng các
+ * phe, rồi tới túi bi của chính mình và nén hương đếm sang vòng sau.
  * Art direction §7, §10 (bụi đất, không confetti), §14.
+ *
+ * Thứ tự đọc trong hai giây: ai thắng (câu reo) → tổng thật là bao nhiêu (mẹt)
+ * → mình đang đứng đâu và còn mấy viên (bảng + túi bi).
  */
+import { useMemo } from 'react';
 import type { Player, RoundResult, Team } from '@tongbi/game-rules';
-import { doiTheoMau, GiayDo, Khan, Met, Non, VachDat } from './common.js';
+import { GiayDo, Met } from './common.js';
+import { BangXepHang, xepHang } from './BangXepHang.js';
+import { useCountdown } from '../lib/useCountdown.js';
 
 interface Props {
   result: RoundResult;
   teams: Team[];
   players: Player[];
-  myTeamId: string | undefined;
+  me: Player;
+  /** Mốc server chuyển sang chuyện tiếp theo; null nếu không đếm ngược. */
+  phaseEndsAt: number | null;
+  vongCuoi: boolean;
 }
 
-export function ResultPanel({ result, teams, players, myTeamId }: Props) {
-  const tenPhe = (id: string) => teams.find((t) => t.id === id)?.name ?? id;
-  const doiCua = (id: string) => doiTheoMau(teams.find((t) => t.id === id)?.color);
-  const minhTrung = myTeamId ? result.winningTeamIds.includes(myTeamId) : false;
+/** Ba kiểu xoáy bi, lặp vòng cho hàng bi trông không đều tăm tắp. */
+const BIEN = ['', 'x2', 'x3'] as const;
+/** Quá số này thì hàng bi thành một vốc bi vô nghĩa, để con số nói thay. */
+const TOI_DA_CHAM = 14;
 
+export function ResultPanel({ result, teams, players, me, phaseEndsAt, vongCuoi }: Props) {
+  const dong = useMemo(() => xepHang(teams, players, result), [teams, players, result]);
+
+  // Nén hương đếm ngược đã cháy sẵn trên tấm liếp (xem `Hud`) — ở đây chỉ cần
+  // biết CÓ đếm ngược hay không để viết đúng câu dưới cùng, không thắp thêm cây
+  // hương thứ hai. Không gõ trống: màn này để đọc, không phải để giục.
+  const conLai = useCountdown(phaseEndsAt, false);
+
+  const tenPhe = (id: string) => teams.find((t) => t.id === id)?.name ?? id;
+  const minhTrung = result.winningTeamIds.includes(me.teamId);
+
+  // Luật CLOSEST cho phe lệch ít nhất thắng, nên "trúng phóc" chỉ đúng khi đáp
+  // án khớp hẳn — không thì câu reo đá nhau với con số ngay dưới nó.
+  const trungY =
+    result.winningTeamIds.length > 0 &&
+    result.winningTeamIds.every(
+      (id) => result.guesses.find((g) => g.teamId === id)?.delta === 0,
+    );
+
+  const tenThang = result.winningTeamIds.map(tenPhe).join(', ');
   const reo = result.push
     ? 'Trật lất cả lũ — bi ai nấy giữ'
     : minhTrung
-      ? 'Trúng phóc!'
-      : `${result.winningTeamIds.map(tenPhe).join(', ')} trúng phóc`;
+      ? trungY
+        ? 'Trúng phóc!'
+        : 'Gần nhất là phe mình!'
+      : trungY
+        ? `${tenThang} trúng phóc`
+        : `${tenThang} đoán gần nhất`;
+
+  const cuaMinh = result.marbleDeltas.find((d) => d.playerId === me.id);
+  const chenh = cuaMinh?.delta ?? 0;
+  const conBi = cuaMinh?.after ?? me.marbleCount;
+
+  // Bi còn lại vẽ đặc, bi vừa mất vẽ mờ ngay sau — thấy ngay vòng này lỗ mấy viên.
+  const soDac = Math.min(conBi, TOI_DA_CHAM);
+  const soMat = chenh < 0 ? Math.min(-chenh, TOI_DA_CHAM - soDac) : 0;
 
   return (
-    <>
+    /* Bọc lại thành một khối để khổ ngang còn xếp được hai cột — mẹt và câu reo
+       bên trái, bảng phe và túi bi bên phải. Cũng để cả khối không bị .tay-cam
+       bóp lại khi chật (mẹt méo mất tròn). */
+    <div className="man-ket-qua">
       <Met className="tong-that hien">
         <span className="nhan-nho">tổng thực tế</span>
         <div className="so-to so">{result.actualTotal}</div>
@@ -32,48 +77,35 @@ export function ResultPanel({ result, teams, players, myTeamId }: Props) {
 
       <p className="reo">{reo}</p>
 
-      <GiayDo>
-        <ul className="bang-doan">
-          {result.guesses.map((g) => {
-            const trung = result.winningTeamIds.includes(g.teamId);
-            const diem = teams.find((t) => t.id === g.teamId)?.score ?? 0;
-            return (
-              <li key={g.teamId} className={trung ? 'trung' : g.disqualified ? 'hong' : ''}>
-                <Khan doi={doiCua(g.teamId)} ten={tenPhe(g.teamId)} sm />
-                <span className="lech">
-                  {trung ? 'trúng' : g.disqualified ? 'đụng đáp án' : `lệch ${g.delta}`}
-                </span>
-                <span className="so-doan so">{g.value}</span>
-                {diem > 0 && (
-                  <span className="vach-nho">
-                    <VachDat so={diem} />
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+      <BangXepHang dong={dong} myTeamId={me.teamId} />
 
-        <div style={{ marginTop: 12 }}>
-          {result.reveals.map((r) => {
-            const p = players.find((x) => x.id === r.playerId);
-            const d = result.marbleDeltas.find((x) => x.playerId === r.playerId);
-            if (!p) return null;
-            const chenh = d?.delta ?? 0;
-            return (
-              <div key={r.playerId} className="dong-bi">
-                <span>
-                  <Non avatar={p.avatar} nho /> {p.name}
-                </span>
-                <span className="giau">giấu {r.marbles}</span>
-                <span className={`chenh so ${chenh >= 0 ? 'len' : 'xuong'}`}>
-                  {chenh > 0 ? `+${chenh}` : chenh} → {d?.after ?? p.marbleCount}
-                </span>
-              </div>
-            );
-          })}
+      <GiayDo className="tui-minh">
+        <div className="nhan-tui">
+          <span className="nhan-nho">bi còn lại trong túi</span>
+          {chenh !== 0 && (
+            <em className={`chenh so ${chenh > 0 ? 'len' : 'xuong'}`}>
+              {chenh > 0 ? `+${chenh}` : chenh} vòng này
+            </em>
+          )}
+        </div>
+        <div className="hang-bi hang-bi-minh" aria-label={`Còn ${conBi} viên bi`}>
+          {Array.from({ length: soDac }, (_, i) => (
+            <span key={`d${i}`} className={`bi ${BIEN[i % 3]}`} aria-hidden />
+          ))}
+          {Array.from({ length: soMat }, (_, i) => (
+            <span key={`m${i}`} className="bi mo" aria-hidden />
+          ))}
+          <b className="so-bi so">{conBi}</b>
         </div>
       </GiayDo>
-    </>
+
+      {/* Không có mốc hết giờ (màn chơi thử tự bấm sang vòng) thì đừng hứa suông
+          là sắp sang vòng. */}
+      {conLai !== null && (
+        <p className="loi-vong">
+          {vongCuoi ? 'vòng cuối rồi — hương tàn là tan sân' : 'hương tàn là cả sân vào vòng sau'}
+        </p>
+      )}
+    </div>
   );
 }

@@ -61,6 +61,8 @@ export function Tutorial() {
   const [selections, setSelections] = useState<Record<string, number>>({});
   const [guesses, setGuesses] = useState<Record<string, number>>({});
   const [result, setResult] = useState<RoundResult | null>(null);
+  /** Số vòng từng phe đã thắng — bảng xếp hạng cuối vòng đọc con số này. */
+  const [thangVong, setThangVong] = useState<Record<string, number>>({});
   const [revealCue, setRevealCue] = useState<RevealCue | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -94,9 +96,9 @@ export function Tutorial() {
         name: p.name,
         color: TEAM_COLORS[i]!,
         captainId: p.id,
-        score: 0,
+        score: thangVong[p.teamId] ?? 0,
       })),
-    [players],
+    [players, thangVong],
   );
 
   const room: PublicRoomState = useMemo(
@@ -173,6 +175,13 @@ export function Tutorial() {
       });
       setResult(r);
       setMarbles(Object.fromEntries(r.marbleDeltas.map((d) => [d.playerId, d.after])));
+      // Cộng điểm TRƯỚC khi vào ROUND_RESULT, giống server làm trong finishRound:
+      // bảng xếp hạng luôn hiện điểm đã tính cả vòng vừa xong.
+      setThangVong((truoc) => {
+        const moi = { ...truoc };
+        for (const id of r.winningTeamIds) moi[id] = (moi[id] ?? 0) + 1;
+        return moi;
+      });
       go(GamePhase.ROUND_RESULT);
     }, 2800);
   };
@@ -258,7 +267,15 @@ export function Tutorial() {
 
         {phase === GamePhase.ROUND_RESULT && result && (
           <>
-            <ResultPanel result={result} teams={teams} players={players} myTeamId={`t-${ME}`} />
+            <ResultPanel
+              result={result}
+              teams={teams}
+              players={players}
+              me={players[0]!}
+              /* Chơi thử thì không có server đếm giờ: tự bấm "Vòng sau" ở dưới. */
+              phaseEndsAt={null}
+              vongCuoi={round >= SETTINGS.totalRounds}
+            />
             <Nut vat="la" co="lg" rong onClick={nextRound}>
               {round >= SETTINGS.totalRounds ? 'Xong rồi — rủ tụi nó chơi thật' : 'Vòng sau'}
             </Nut>

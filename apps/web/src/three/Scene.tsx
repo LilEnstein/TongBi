@@ -19,10 +19,13 @@ import {
 } from '@tongbi/game-rules';
 import { PlayerSeat } from './PlayerSeat.js';
 import { San } from './San.js';
+import { Quanh } from './Quanh.js';
 import { Dice } from './Dice.js';
 import { seatAngle, seatRadius, SEAT_RADIUS } from './geometry.js';
 import { MAU } from './toon.js';
 import type { ChiTiet } from './ConVat.js';
+import { khiTroi, pha } from './troi.js';
+import { useKhungCanh } from '../lib/khungCanh.js';
 import { sfx } from '../audio/sfx.js';
 import type { RevealCue } from '../net/store.js';
 
@@ -122,12 +125,16 @@ function khungTheoPhase(phase: GamePhase): keyof typeof KHUNG_HINH {
   }
 }
 
-/** Mặt trời của từng khung giờ — §2. Hướng, màu và độ gắt đều đổi. */
+/**
+ * Mặt trời của từng khung giờ — §2. Hướng, màu và độ gắt đều đổi.
+ *
+ * Màu không khí (nền canvas + sương) KHÔNG nằm ở đây mà ở `troi.ts`: nó thuộc về
+ * buổi và mùa (§20) chứ không thuộc về phase.
+ */
 interface Nang {
   huong: [number, number, number];
   mau: string;
   manh: number;
-  troi: string;
 }
 
 function nangTheoPhase(phase: GamePhase): Nang {
@@ -135,21 +142,21 @@ function nangTheoPhase(phase: GamePhase): Nang {
     case GamePhase.WAITING:
     case GamePhase.ROUND_START:
       // 8–10h: nắng nghiêng, còn dịu.
-      return { huong: [4.6, 4.2, 3.6], mau: '#FFF6E0', manh: 1.15, troi: '#C08A48' };
+      return { huong: [4.6, 4.2, 3.6], mau: '#FFF6E0', manh: 1.15 };
     case GamePhase.GUESS_TOTAL:
     case GamePhase.REVEAL:
     case GamePhase.ROUND_RESULT:
       // 12h: nắng gắt nhất, bóng ngắn, tương phản cao.
-      return { huong: [0.9, 8.2, 1.5], mau: '#FFF8DC', manh: 1.75, troi: '#C89152' };
+      return { huong: [0.9, 8.2, 1.5], mau: '#FFF8DC', manh: 1.75 };
     case GamePhase.DICE_ROLL:
       // 15h: nắng chếch, bóng dài.
-      return { huong: [-4.8, 4.0, 3.2], mau: '#FFD79A', manh: 1.35, troi: '#B87C3E' };
+      return { huong: [-4.8, 4.0, 3.2], mau: '#FFD79A', manh: 1.35 };
     case GamePhase.GAME_OVER:
       // 17h30: hoàng hôn, khói bếp.
-      return { huong: [-6.2, 2.2, 2.6], mau: '#F2A65A', manh: 1.0, troi: '#9E6430' };
+      return { huong: [-6.2, 2.2, 2.6], mau: '#F2A65A', manh: 1.0 };
     default:
       // 10h: nắng đứng, rõ ràng, sẵn sàng.
-      return { huong: [3.2, 6.5, 4.0], mau: '#FFF1CE', manh: 1.45, troi: '#C08A48' };
+      return { huong: [3.2, 6.5, 4.0], mau: '#FFF1CE', manh: 1.45 };
   }
 }
 
@@ -383,7 +390,7 @@ function CameraRig({
  * Bụi đất lơ lửng trong nắng — VFX §10.
  * Đây là chuyển động duy nhất không do người chơi kích hoạt của scene.
  */
-function BuiDat({ dam }: { dam: number }) {
+function BuiDat({ dam, mau }: { dam: number; mau: string }) {
   const group = useRef<Group>(null);
   const hat = useMemo(
     () =>
@@ -417,7 +424,7 @@ function BuiDat({ dam }: { dam: number }) {
       {hat.map((h, i) => (
         <mesh key={i} position={h.p}>
           <sphereGeometry args={[h.s, 5, 4]} />
-          <meshBasicMaterial color={MAU.datSang} transparent opacity={dam} />
+          <meshBasicMaterial color={mau} transparent opacity={dam} />
         </mesh>
       ))}
     </group>
@@ -449,6 +456,14 @@ export function Scene({
   const ringRadius = seatRadius(players.length);
   const dong = ringRadius / SEAT_RADIUS;
   const nang = nangTheoPhase(room.phase);
+
+  /* Buổi và mùa người chơi đang chọn. Khí trời chỉ NHÂN vào nắng của phase chứ
+     không thay nó, nên nhịp ánh sáng §2 vẫn kể chuyện: nửa đêm mùa đông thì
+     phase GUESS_TOTAL vẫn là cái phase sáng gắt nhất của cả ván. */
+  const buoi = useKhungCanh((s) => s.buoi);
+  const mua = useKhungCanh((s) => s.mua);
+  const khi = useMemo(() => khiTroi(buoi, mua), [buoi, mua]);
+  const nangMau = useMemo(() => pha(nang.mau, khi.nangMau, khi.nangPha), [nang.mau, khi]);
 
   const teamColor = useMemo(() => {
     const map = new Map(room.teams.map((t) => [t.id, t.color]));
@@ -507,17 +522,19 @@ export function Scene({
       camera={{ position: [0, 3.7, 5.4], fov: 46, near: 0.1, far: 60 }}
       gl={{ antialias: true, powerPreference: 'high-performance' }}
     >
-      <color attach="background" args={[nang.troi]} />
+      {/* Màu không khí là của buổi/mùa, không phải của phase: một cái sân dưới
+          trăng thì mọi phase đều dưới trăng. */}
+      <color attach="background" args={[khi.troi]} />
       {/* Sương nắng đẩy ra xa theo bán kính vòng người, để sân đông không bị mờ. */}
-      <fog attach="fog" args={[nang.troi, 10 * dong, 24 * dong]} />
+      <fog attach="fog" args={[khi.troi, khi.suong[0] * dong, khi.suong[1] * dong]} />
 
       {/* Ánh sáng của khung giờ — §2. Đất hắt ngược lên nên bóng không bao giờ đen. */}
-      <ambientLight intensity={0.72} color="#FFEAC4" />
-      <hemisphereLight args={['#FFE9BE', MAU.datToi, 0.65]} />
+      <ambientLight intensity={khi.ambient.manh} color={khi.ambient.mau} />
+      <hemisphereLight args={[khi.hemi.tren, khi.hemi.duoi, khi.hemi.manh]} />
       <directionalLight
         position={nang.huong}
-        intensity={nang.manh}
-        color={nang.mau}
+        intensity={nang.manh * khi.nangHeSo}
+        color={nangMau}
         castShadow
         shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-7}
@@ -532,8 +549,15 @@ export function Scene({
         veKhungLuc={veKhungLuc}
         onXoay={xoay}
       />
-      <San radius={ringRadius} round={room.round} />
-      <BuiDat dam={buiDam} />
+      <San radius={ringRadius} round={room.round} dat={khi.dat} />
+      <Quanh
+        radius={ringRadius}
+        buoi={buoi}
+        mua={mua}
+        khi={khi}
+        nhe={players.length > 12}
+      />
+      <BuiDat dam={buiDam * khi.buiHeSo} mau={khi.dat.sang} />
 
       {players.map((p, i) => {
         const isLocal = p.id === localPlayerId;

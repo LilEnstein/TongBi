@@ -1700,6 +1700,8 @@ hr.tach {
 .tong-that .nhan-nho {
   font-size: 13px;
   font-weight: 600;
+  /* Nhãn xuống dòng là mẹt cao hơn rộng, aspect-ratio thua min-content: hết tròn. */
+  white-space: nowrap;
 }
 .tong-that .so-to {
   font-family: 'Baloo 2', cursive;
@@ -1721,61 +1723,265 @@ hr.tach {
   }
 }
 
-.bang-doan {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+/* Cả màn kết quả là một khối, để khổ ngang xếp được hai cột và để .tay-cam
+   không bóp méo cái mẹt khi chật. */
+.man-ket-qua {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
 }
-.bang-doan li {
+.man-ket-qua .tong-that {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Bảng xếp hạng các phe — chiếu cói trải giữa sân (§7).
+   Gộp bảng đoán và bảng bi làm một: mỗi dòng là một phe, dưới tên phe là từng
+   đứa giấu mấy viên và được mất mấy viên. */
+.bang-phe {
+  background: repeating-linear-gradient(0deg, #e3c98e 0 5px, #d6b872 5px 10px);
+  border: 4px solid var(--dat-toi);
+  padding: 6px;
+}
+.dau-bang {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 0;
-  border-bottom: 2px dashed rgba(42, 33, 27, 0.25);
+  padding: 2px 10px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.62;
 }
-.bang-doan li:last-child {
-  border-bottom: 0;
+.dau-bang .o-hang {
+  width: 30px;
 }
-.bang-doan .so-doan {
-  font-family: 'Baloo 2', cursive;
-  font-weight: 800;
-  font-size: 26px;
-  margin-left: auto;
+.dau-bang .o-phe {
+  flex: 1;
 }
-.bang-doan li.trung .so-doan {
-  color: var(--la);
-}
-.bang-doan li.hong {
-  opacity: 0.55;
-}
-.bang-doan .lech {
-  font-size: 13px;
-  opacity: 0.7;
-  min-width: 60px;
+.dau-bang .o-diem {
+  width: 54px;
   text-align: right;
 }
 
-.dong-bi {
+.than-bang {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  /* Sân free-for-all có tới 30 phe: cho bảng cuộn riêng để túi bi và nén hương
+     phía dưới không bị đẩy khuất khỏi màn hình. */
+  max-height: 22dvh;
+  overflow-y: auto;
+}
+
+.dong-phe {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  padding: 5px 0;
-  border-top: 2px dashed rgba(42, 33, 27, 0.22);
+  gap: 9px;
+  padding: 6px 10px;
+  border-bottom: 2px dashed rgba(42, 33, 27, 0.28);
 }
-.dong-bi .giau {
+.dong-phe:last-child {
+  border-bottom: 0;
+}
+.dong-phe.hong {
+  opacity: 0.62;
+}
+/* Phe của mình: một vệt sáng nhạt, không tranh vàng nghệ với phe thắng. */
+.dong-phe.la-minh {
+  background: rgba(246, 241, 228, 0.3);
+}
+/* Phe thắng — vàng nghệ và một vòng mực rung quanh dòng (§3.3, §4). */
+.dong-phe.trung {
+  background: rgba(232, 167, 46, 0.34);
+}
+.dong-phe.trung::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border: 3px solid var(--muc);
+  filter: url(#nham);
+  pointer-events: none;
+}
+
+.hang-phe {
+  width: 30px;
+  flex: 0 0 auto;
+  font-family: 'Baloo 2', cursive;
+  font-weight: 800;
+  font-size: 21px;
+  text-align: center;
   opacity: 0.72;
 }
-.dong-bi .chenh {
-  margin-left: auto;
-  font-weight: 700;
+.dong-phe.trung .hang-phe {
+  opacity: 1;
+}
+
+/* Nắm tay giơ lên thay vương miện — đúng dấu hiệu của game. */
+.nam-tay {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  color: var(--muc);
+}
+
+.than-phe {
+  flex: 1;
+  min-width: 0;
+}
+.tren-phe {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+/* .khan mặc định là inline-block, chữ line-height 1.65 cộng SVG canh baseline
+   làm nhãn cao tới 38px — trong bảng thì đó là 18px chết mỗi dòng. */
+.tren-phe .khan {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.25;
+}
+.doan-phe {
+  font-size: 12px;
+  opacity: 0.72;
+}
+.dong-phe.trung .doan-phe {
+  opacity: 0.92;
+  font-weight: 600;
+}
+
+.nguoi-phe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+}
+.ai-phe {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+}
+/* Vành nón trong bảng chật hơn cỡ "nho" mặc định. */
+.ai-phe .non {
+  width: 30px;
+  height: 30px;
+  border-width: 2.5px;
+  font-size: 13px;
+}
+.ai-phe .non .chop {
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-width: 2px;
+}
+.ai-phe b {
+  font-weight: 600;
+}
+.ai-phe .giau {
+  font-style: normal;
+  font-size: 12px;
+  opacity: 0.66;
+}
+
+/* Số bi được / mất, dùng chung cho bảng phe và túi bi của mình. */
+.chenh {
+  font-style: normal;
   font-family: 'Baloo 2', cursive;
+  font-weight: 700;
 }
-.dong-bi .chenh.len {
-  color: var(--la);
+.chenh.len {
+  color: var(--la-toi);
 }
-.dong-bi .chenh.xuong {
+.chenh.xuong {
   color: var(--dieu);
+}
+
+.cot-diem {
+  width: 54px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.diem-phe {
+  font-family: 'Baloo 2', cursive;
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+}
+.them-diem {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border: 2px solid var(--muc);
+  border-radius: 8px;
+  background: rgba(169, 144, 112, 0.42);
+  opacity: 0.72;
+}
+.them-diem.an {
+  background: var(--la);
+  color: var(--phan);
+  opacity: 1;
+}
+
+/* ── Túi bi của chính mình ── */
+
+.tui-minh {
+  padding: 12px 18px 14px;
+}
+.nhan-tui {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.nhan-tui .nhan-nho {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.72;
+}
+.nhan-tui .chenh {
+  margin-left: auto;
+  font-size: 15px;
+}
+.hang-bi-minh {
+  justify-content: flex-start;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  /* Con số 26px kéo cả dòng cao lên 43px nếu để line-height thừa hưởng 1.65. */
+  line-height: 1;
+  min-height: 0;
+}
+.hang-bi-minh .bi {
+  width: 22px;
+  height: 22px;
+}
+.hang-bi-minh .so-bi {
+  font-family: 'Baloo 2', cursive;
+  font-weight: 800;
+  font-size: 26px;
+  margin-left: 8px;
+}
+/* Viên vừa mất trong vòng: còn thấy chỗ nhưng đã nhạt đi. */
+.bi.mo {
+  opacity: 0.3;
+  filter: grayscale(0.7);
+}
+
+/* Câu chốt dưới cùng — nén hương đếm ngược nằm trên tấm liếp, xem `Hud`. */
+.loi-vong {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--phan);
+  text-shadow: 0 2px 0 var(--dat-toi);
 }
 
 .reo {
@@ -1962,6 +2168,39 @@ hr.tach {
   .hieu {
     font-size: 64px;
   }
+
+  /* Khổ ngang: mẹt và câu reo đứng một cột bên trái, bảng phe và túi bi bên
+     phải — cùng thứ tự đọc, nhưng không phải cuộn trong 48dvh. */
+  .tay-cam > .man-ket-qua {
+    max-width: 880px;
+    display: grid;
+    grid-template-columns: 264px minmax(0, 1fr);
+    gap: 10px 22px;
+    align-items: start;
+  }
+  .man-ket-qua .tong-that {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .man-ket-qua .reo {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .man-ket-qua .bang-phe {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+  .man-ket-qua .tui-minh {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .man-ket-qua .loi-vong {
+    grid-column: 1 / -1;
+    grid-row: 4;
+  }
+  .man-ket-qua .than-bang {
+    max-height: 23dvh;
+  }
 }
 
 @media (max-width: 380px) {
@@ -1977,7 +2216,37 @@ hr.tach {
   }
 }
 
-/* Tôn trọng prefers-reduced-motion — §11: bỏ rung, lá rơi, khói hương. */
+/* Màn kết quả trên máy màn ngắn (iPhone SE / 8): mẹt và chữ reo nhường chỗ,
+   để ba thứ phải đọc trong hai giây — ai thắng, tổng thật, bi của mình — không
+   cái nào rơi xuống dưới mép .tay-cam. */
+@media (max-height: 730px) {
+  .tong-that {
+    width: min(128px, 34vw);
+  }
+  .tong-that .so-to {
+    font-size: 46px;
+  }
+  .tong-that .nhan-nho {
+    font-size: 11px;
+  }
+  .reo {
+    font-size: 21px;
+  }
+  .than-bang {
+    max-height: 18dvh;
+  }
+  .tui-minh {
+    padding: 9px 14px 10px;
+  }
+  .hang-bi-minh .bi {
+    width: 19px;
+    height: 19px;
+  }
+  .hang-bi-minh .so-bi {
+    font-size: 22px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -2183,5 +2452,143 @@ hr.tach {
 @media (prefers-reduced-motion: reduce) {
   .ve-khung {
     animation: none;
+  }
+}
+
+/* ════════════ Khung cảnh: trời và mùa — buổi sáng, đêm trăng, bốn mùa ═══════
+
+   Cảnh 3D đổi màu bằng bảng trong `three/troi.ts`. Các màn 2D (trang chủ, sảnh,
+   phòng chờ, panel giấy dó) thì đổi bằng cách ghi lại đúng mấy biến nền tảng ở
+   §3.1 — nhờ vậy không có một component nào phải biết tới mùa.
+
+   Thứ tự khối ở đây có ý: mùa viết trước, đêm viết sau và có selector đặc hiệu
+   hơn (`[data-buoi][data-mua]`), nên đêm luôn thắng mùa. Đêm mùa hè và đêm mùa
+   đông khác nhau ở cảnh 3D, còn giao diện 2D thì chung một tông chàm.
+   ------------------------------------------------------------------------- */
+
+/* Mùa hè là bảng màu gốc, không cần ghi lại gì. */
+:root[data-mua='xuan'] {
+  --dat-sang: #c99a5e;
+  --dat: #a9743a;
+  --dat-toi: #6b4520;
+}
+:root[data-mua='thu'] {
+  --dat-sang: #d9b071;
+  --dat: #b98a46;
+  --dat-toi: #7a5426;
+}
+:root[data-mua='dong'] {
+  --dat-sang: #c3a67e;
+  --dat: #a9885f;
+  --dat-toi: #6e5a3c;
+}
+
+/* Đêm: đất ngả chàm, rơm và tre tối lại, giấy dó xuống một bậc cho đỡ chói. */
+:root[data-buoi='toi'][data-mua] {
+  --dat-sang: #4a5a78;
+  --dat: #33415a;
+  --dat-toi: #1f2939;
+  --tranh: #a08a56;
+  --tranh-toi: #6d5b2d;
+  --tre: #8a7344;
+  --tre-toi: #5c4c29;
+  --giay: #cfc4a6;
+  --bac: #64615c;
+}
+
+/* Lớp .nang của §2 là nắng, nên ban đêm phải thay bằng ánh trăng — nếu không
+   thì phase 12h vẫn phủ một lớp vàng nghệ lên cả đêm. */
+:root[data-buoi='toi'] .nang {
+  background: rgba(31, 63, 99, 0.3);
+  box-shadow: inset 0 0 140px rgba(10, 18, 34, 0.5);
+}
+/* Tia nắng xuyên khe mái tranh lúc REVEAL cũng hoá thành tia trăng. */
+:root[data-buoi='toi'] .tia-nang {
+  background: linear-gradient(
+    108deg,
+    transparent 0 38%,
+    rgba(196, 214, 255, 0.22) 44%,
+    rgba(220, 230, 255, 0.34) 50%,
+    rgba(196, 214, 255, 0.2) 56%,
+    transparent 62% 100%
+  );
+}
+
+/* ─────────── Nút chọn khung cảnh: mẩu giấy dó ở góc phải dưới ───────────── */
+
+.khung-canh {
+  position: fixed;
+  right: 10px;
+  bottom: calc(10px + var(--safe-b));
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.nut-khung-canh {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--muc);
+  background: var(--tre);
+  border: 3px solid var(--muc);
+  border-radius: 50%;
+  box-shadow: 0 3px 0 var(--tre-toi);
+  cursor: pointer;
+  opacity: 0.6;
+  transition:
+    opacity 0.18s var(--truot),
+    transform 0.12s var(--nay);
+}
+.nut-khung-canh:hover,
+.nut-khung-canh:focus-visible,
+.nut-khung-canh[aria-expanded='true'] {
+  opacity: 1;
+}
+.nut-khung-canh:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--tre-toi);
+}
+.nut-khung-canh svg {
+  width: 22px;
+  height: 22px;
+}
+
+.khung-canh-bang {
+  width: min(80vw, 272px);
+  padding: 12px 13px;
+  background: var(--giay);
+  background-image: var(--hat);
+  border: 3px solid var(--muc);
+  border-radius: 14px 5px 14px 5px;
+  box-shadow: 0 4px 0 var(--dat-toi);
+  animation: mo-cau-hien 0.26s var(--nay);
+}
+.khung-canh-bang .nhan {
+  margin-bottom: 6px;
+}
+.khung-canh-bang .chon-nhanh {
+  margin-bottom: 13px;
+}
+.khung-canh-bang > :last-child {
+  margin-bottom: 0;
+}
+/* Thẻ tre trong tờ giấy nhỏ hơn ngoài sảnh, nhưng vẫn đủ 36px cho ngón tay. */
+.khung-canh-bang .the-tre-nho {
+  min-height: 36px;
+  padding: 5px 10px;
+  font-size: 14px;
+}
+.khung-canh-bang .ghi-chu {
+  margin: 0;
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nut-khung-canh {
+    transition: none;
   }
 }

@@ -406,7 +406,9 @@ export function RoomScreen() {
             result={room.lastResult}
             teams={room.teams}
             players={room.players}
-            myTeamId={me.teamId}
+            me={me}
+            phaseEndsAt={room.phaseEndsAt}
+            vongCuoi={room.round >= room.settings.totalRounds}
           />
         )}
 

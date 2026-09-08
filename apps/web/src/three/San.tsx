@@ -9,12 +9,22 @@ import { useMemo } from 'react';
 import { DoubleSide } from 'three';
 import { MAU, toonGradient } from './toon.js';
 import { VONG_RADIUS } from './geometry.js';
+import type { DatMau } from './troi.js';
+
+/** Đất mùa hè ban ngày — khung cảnh gốc của art direction. */
+const DAT_MAC_DINH: DatMau = { chinh: MAU.dat, sang: MAU.datSang, toi: MAU.datToi };
 
 interface SanProps {
   /** Bán kính vòng người ngồi; vòng tròn vẽ nằm trong lòng vòng người. */
   radius?: number;
   /** Vòng chơi thứ mấy — càng về sau vạch càng mờ. */
   round?: number;
+  /**
+   * Bảng màu đất của buổi và mùa đang chọn (`three/troi.ts`). Đất nồm mùa xuân,
+   * đất bạc mùa đông và đất dưới trăng là ba màu khác nhau, nhưng vẫn cùng một
+   * cái sân — nên chỉ màu đổi, hình không đổi.
+   */
+  dat?: DatMau;
 }
 
 /** Vết chân trần và vệt bi lăn, rải cố định theo một dãy số tất định. */
@@ -33,7 +43,7 @@ function vetTren(radius: number): Array<{ p: [number, number, number]; r: number
   return out;
 }
 
-export function San({ radius = VONG_RADIUS, round = 1 }: SanProps) {
+export function San({ radius = VONG_RADIUS, round = 1, dat = DAT_MAC_DINH }: SanProps) {
   const vach = Math.max(0.3, 0.82 - (round - 1) * 0.055);
   const vet = useMemo(() => vetTren(radius), [radius]);
   // Vòng tròn vạch bằng que nằm trong lòng vòng người ngồi.
@@ -44,38 +54,38 @@ export function San({ radius = VONG_RADIUS, round = 1 }: SanProps) {
       {/* Sân đất nện: mặt phẳng lớn, màu bệt, không bóng. */}
       <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[Math.max(14, radius * 3), 48]} />
-        <meshToonMaterial color={MAU.dat} gradientMap={toonGradient()} />
+        <meshToonMaterial color={dat.chinh} gradientMap={toonGradient()} />
       </mesh>
 
       {/* Khoảng đất giữa vòng bị dẫm nhiều nên sáng và nhẵn hơn. */}
       <mesh position={[0, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[vongVe * 0.92, 40]} />
-        <meshBasicMaterial color={MAU.datSang} transparent opacity={0.34} />
+        <meshBasicMaterial color={dat.sang} transparent opacity={0.34} />
       </mesh>
 
       {/* Vòng tròn vạch bằng que — đường kính theo số người ngồi. */}
       <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[vongVe - 0.035, vongVe + 0.035, 72]} />
-        <meshBasicMaterial color={MAU.datToi} transparent opacity={vach} side={DoubleSide} />
+        <meshBasicMaterial color={dat.toi} transparent opacity={vach} side={DoubleSide} />
       </mesh>
       {/* Nét vạch thứ hai lệch một chút: que vạch không bao giờ đi trúng một lần. */}
       <mesh position={[0.04, 0.005, -0.03]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[vongVe - 0.02, vongVe + 0.02, 64]} />
-        <meshBasicMaterial color={MAU.datToi} transparent opacity={vach * 0.5} side={DoubleSide} />
+        <meshBasicMaterial color={dat.toi} transparent opacity={vach * 0.5} side={DoubleSide} />
       </mesh>
 
       {/* Vết chân trần, vệt bi lăn, chỗ que chọc xuống đất. */}
       {vet.map((v, i) => (
         <mesh key={i} position={v.p} rotation={[-Math.PI / 2, 0, v.xoay]}>
           <circleGeometry args={[v.r, 12]} />
-          <meshBasicMaterial color={MAU.datToi} transparent opacity={0.12} />
+          <meshBasicMaterial color={dat.toi} transparent opacity={0.12} />
         </mesh>
       ))}
 
       {/* Chỗ đặt bi chung và lăn xúc xắc ở chính giữa: đất bị vét lõm xuống. */}
       <mesh position={[0, 0.003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.42, 20]} />
-        <meshBasicMaterial color={MAU.datToi} transparent opacity={0.2} />
+        <meshBasicMaterial color={dat.toi} transparent opacity={0.2} />
       </mesh>
     </group>
   );
