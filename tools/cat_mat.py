@@ -1,6 +1,11 @@
 """Cắt sheet 10 đầu con vật (2 hàng × 5 cột) thành 10 avatar nền trong suốt.
 
-    python tools/cat_mat.py <duong_dan_sheet.png>
+    python tools/cat_mat.py <duong_dan_sheet.png> [ten1,ten2,...,ten10]
+
+Không đưa danh sách tên thì dùng bộ đầu tiên (trâu → hổ). Sheet thứ hai trở đi
+PHẢI đưa tên, không thì nó ghi đè mất mười con cũ:
+
+    python tools/cat_mat.py image/sheet2.png rong,ran,nguaxanh,ngua,sonduong,de,khi,khido,vittroi,cho
 
 Nền trắng được tách bằng flood fill **từ mép ảnh**, không phải bằng "chọn mọi
 pixel trắng" — nhờ vậy mảng bụng màu kem của cóc, mèo, chim, hổ không bị thủng,
@@ -130,6 +135,11 @@ def main() -> int:
         print(f"Không thấy file: {sheet_path}")
         return 1
 
+    ten_list = sys.argv[2].split(",") if len(sys.argv) > 2 else TEN
+    if len(ten_list) != COT * HANG:
+        print(f"Cần đúng {COT * HANG} tên, nhận được {len(ten_list)}: {ten_list}")
+        return 2
+
     goc = Path(__file__).resolve().parent.parent
     d_png = goc / "mat_cutout"
     d_webp = goc / "apps" / "web" / "public" / "mat"
@@ -155,7 +165,7 @@ def main() -> int:
         print(f"  vạch dọc hàng {h + 1}: {bien_x[h][1:-1]}")
     print()
 
-    for i, ten in enumerate(TEN):
+    for i, ten in enumerate(ten_list):
         hang, cot = divmod(i, COT)
         hop = (bien_x[hang][cot], bien_y[hang], bien_x[hang][cot + 1], bien_y[hang + 1])
         con = ep_vuong(tach_nen(sheet.crop(hop)))

@@ -4,10 +4,14 @@
  * đủ chỗ ngồi, tay có rig ngón, bi hiển thị đúng luật thông tin ẩn, và sân là
  * nền đất chứ không phải cái bàn (art direction §9.4).
  */
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { Mesh, Object3D } from 'three';
 import {
+  AVATAR_TEN,
   AVATARS,
   DEFAULT_SETTINGS,
   GamePhase,
@@ -16,6 +20,7 @@ import {
   type PublicRoomState,
 } from '@tongbi/game-rules';
 import { ConVat, loaiConVat, type TuThe } from '../src/three/ConVat.js';
+import { LONG } from '../src/three/toon.js';
 import { Hand } from '../src/three/Hand.js';
 import { PlayerSeat } from '../src/three/PlayerSeat.js';
 import { San } from '../src/three/San.js';
@@ -269,7 +274,19 @@ describe('Sân đông', () => {
 describe('Con vật 3D — art direction §9.1 mở rộng', () => {
   const drive = { curl: 0, reach: 0, lift: 0 };
 
-  it('dựng được cả mười con vật, mỗi con một hình khối riêng', async () => {
+  it('con nào trong AVATARS cũng có ảnh mặt, tên đọc và bảng lông riêng', () => {
+    for (const loai of AVATARS) {
+      // Thiếu bảng lông thì boLong() lặng lẽ lùi về màu trâu — không lỗi, chỉ sai.
+      expect(LONG[loai], loai).toBeDefined();
+      expect(AVATAR_TEN[loai], loai).toBeDefined();
+      // Không viết `new URL('../public/…', import.meta.url)`: Vite viết lại mẫu đó
+      // thành URL tài nguyên web chứ không còn là đường dẫn file.
+      const anh = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'mat', `mat_${loai}.webp`);
+      expect(existsSync(anh), loai).toBe(true);
+    }
+  });
+
+  it('dựng được cả hai mươi con vật, mỗi con một hình khối riêng', async () => {
     const soMesh: Record<string, number> = {};
     for (const loai of AVATARS) {
       const r = await ReactThreeTestRenderer.create(

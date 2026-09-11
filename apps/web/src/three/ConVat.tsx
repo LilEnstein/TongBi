@@ -1,9 +1,9 @@
 /**
- * Mười con vật tranh dân gian, dựng bằng primitive — art direction §9.1 mở rộng.
+ * Hai mươi con vật tranh dân gian, dựng bằng primitive — art direction §9.1 mở rộng.
  *
  * Cùng triết lý với `Hand.tsx`: KHÔNG dùng file GLB. Mỗi con vật là một bộ khớp
  * lồng nhau (thân → cổ → đầu → tai/mỏ/đuôi) ghép từ capsule và sphere, khác nhau
- * ở một bảng cấu hình chứ không phải mười file model. Nhờ vậy 30 con cùng ngồi
+ * ở một bảng cấu hình chứ không phải hai mươi file model. Nhờ vậy 30 con cùng ngồi
  * quanh sân mà không tải thêm một byte asset nào, và đổi bảng màu là đổi cả bộ.
  *
  * Mọi animation ghi trực tiếp vào object3D trong `useFrame`, không đi qua React
@@ -21,7 +21,7 @@ import { damp } from './geometry.js';
 import { boLong, MAU, toonGradient, type BoLong } from './toon.js';
 import type { HandDrive } from './Hand.js';
 
-/* ══════════════════════ Bảng cấu hình mười con ══════════════════════════ */
+/* ══════════════════════ Bảng cấu hình hai mươi con ══════════════════════ */
 
 type KieuTai = 'sung' | 'mao' | 'cup' | 'nhon' | 'tron' | 'khong' | 'chom';
 type KieuMom = 'moom' | 'mo' | 'mo-bet' | 'hech' | 'rong' | 'moi-ca';
@@ -66,6 +66,17 @@ const CAU_HINH: Record<string, CauHinh> = {
   vit: { tai: 'khong', mom: 'mo-bet', duoi: 'xoe', vet: 'khong', quirk: 'mo-thuc', dau: 0.16, than: 0.22, cao: 0.38, mat: 0.028, matRong: 0.52 },
   chim: { tai: 'chom', mom: 'mo', duoi: 'xoe', vet: 'uc', quirk: 'nhun-nhay', dau: 0.14, than: 0.175, cao: 0.32, mat: 0.03, matRong: 0.52 },
   ho: { tai: 'nhon', mom: 'moom', duoi: 'day', vet: 'van', quirk: 'vay-duoi', dau: 0.2, than: 0.26, cao: 0.42, mat: 0.036, matRong: 0.5 },
+  // Bộ thứ hai: ghép lại từ đúng những bộ phận trên, không thêm kiểu mới.
+  rong: { tai: 'sung', mom: 'moom', duoi: 'day', vet: 'vay', quirk: 'vay-duoi', dau: 0.19, than: 0.24, cao: 0.42, mat: 0.034, matRong: 0.54 },
+  ran: { tai: 'khong', mom: 'moom', duoi: 'manh', vet: 'vay', quirk: 'liem', dau: 0.155, than: 0.18, cao: 0.44, mat: 0.034, matRong: 0.56 },
+  nguaxanh: { tai: 'nhon', mom: 'moom', duoi: 'mem', vet: 'khong', quirk: 'hit', dau: 0.18, than: 0.24, cao: 0.44, mat: 0.03, matRong: 0.52 },
+  ngua: { tai: 'nhon', mom: 'moom', duoi: 'mem', vet: 'khong', quirk: 'hit', dau: 0.18, than: 0.24, cao: 0.44, mat: 0.03, matRong: 0.52 },
+  sonduong: { tai: 'sung', mom: 'moom', duoi: 'manh', vet: 'khong', quirk: 'hit', dau: 0.175, than: 0.22, cao: 0.42, mat: 0.03, matRong: 0.5 },
+  de: { tai: 'sung', mom: 'moom', duoi: 'manh', vet: 'khong', quirk: 'mo-thuc', dau: 0.17, than: 0.22, cao: 0.4, mat: 0.03, matRong: 0.5 },
+  khi: { tai: 'tron', mom: 'moom', duoi: 'mem', vet: 'uc', quirk: 'nhun-nhay', dau: 0.18, than: 0.2, cao: 0.38, mat: 0.034, matRong: 0.46 },
+  khido: { tai: 'tron', mom: 'moom', duoi: 'mem', vet: 'uc', quirk: 'nhun-nhay', dau: 0.18, than: 0.2, cao: 0.38, mat: 0.034, matRong: 0.46 },
+  vittroi: { tai: 'khong', mom: 'mo-bet', duoi: 'xoe', vet: 'khong', quirk: 'mo-thuc', dau: 0.16, than: 0.22, cao: 0.38, mat: 0.028, matRong: 0.52 },
+  cho: { tai: 'cup', mom: 'moom', duoi: 'mem', vet: 'uc', quirk: 'vay-duoi', dau: 0.18, than: 0.22, cao: 0.38, mat: 0.034, matRong: 0.5 },
 };
 
 export const LOAI_MAC_DINH = 'trau';

@@ -49,6 +49,30 @@ Nếu bạn muốn giữ đúng 10 con cũ, chỉ cần đổi danh sách con v�
 | 9 | `chim` | Chim chào mào | `mat_chim.webp` |
 | 10 | `ho` | Hổ | `mat_ho.webp` |
 
+**Bộ thứ hai** (sheet `image/mat_sheet2_sach.png` — bản gốc Gemini đã xoá watermark ngôi sao
+trên cổ con chó), cắt bằng:
+
+```bash
+python tools/cat_mat.py image/mat_sheet2_sach.png rong,ran,nguaxanh,ngua,sonduong,de,khi,khido,vittroi,cho
+```
+
+| # | id | Con vật | File cuối |
+|---|---|---|---|
+| 11 | `rong` | Rồng xanh, sừng vàng | `mat_rong.webp` |
+| 12 | `ran` | Rắn xanh, bụng kem | `mat_ran.webp` |
+| 13 | `nguaxanh` | Ngựa xanh, bờm vàng | `mat_nguaxanh.webp` |
+| 14 | `ngua` | Ngựa hồng (nâu đỏ) | `mat_ngua.webp` |
+| 15 | `sonduong` | Sơn dương đỏ, sừng cong | `mat_sonduong.webp` |
+| 16 | `de` | Dê trắng, có râu | `mat_de.webp` |
+| 17 | `khi` | Khỉ vàng | `mat_khi.webp` |
+| 18 | `khido` | Khỉ đỏ | `mat_khido.webp` |
+| 19 | `vittroi` | Vịt trời đầu xanh | `mat_vittroi.webp` |
+| 20 | `cho` | Chó | `mat_cho.webp` |
+
+Id chỉ gồm chữ thường không dấu, không gạch dưới — `Non` dựa vào đó để tách id với emoji
+của hồ sơ cũ. Thêm con mới thì phải sửa cả ba file: `AVATARS` + `AVATAR_TEN` (game-rules `defaults.ts`),
+`CAU_HINH` (`ConVat.tsx`) và `LONG` (`toon.ts`); test `scene.test.tsx` bắt nếu thiếu.
+
 Đặt tại: `apps/web/public/mat/`
 Kích thước: **256×256 px**, WebP **có alpha** (nền trong suốt), mỗi file ≤ 12KB.
 

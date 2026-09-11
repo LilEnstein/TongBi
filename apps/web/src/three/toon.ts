@@ -58,7 +58,7 @@ export function tongDa(seed: number): string {
 }
 
 /**
- * Bảng lông của mười con vật tranh dân gian — §3.1 mở rộng cho §9.1.
+ * Bảng lông của hai mươi con vật tranh dân gian — §3.1 mở rộng cho §9.1.
  *
  * Mỗi con ba tông: lông chính, tông tối (bụng dưới, vệt, trong tai) và tông
  * sáng (ức, mõm, quầng mắt). Màu lấy trong dải đất–nghệ–chàm của bảng gốc để
@@ -81,6 +81,17 @@ export const LONG: Record<string, BoLong> = {
   vit: { chinh: '#F2E5C4', toi: '#BFA97A', sang: '#FFF8E4' },
   chim: { chinh: '#2F6E63', toi: '#1C4740', sang: '#E8A72E' },
   ho: { chinh: '#E09A3C', toi: '#2A211B', sang: '#F6ECD2' },
+  // Bộ thứ hai — màu hút thẳng từ sheet tranh, cùng dải lá–nghệ–gạch với bộ đầu.
+  rong: { chinh: '#8FA64A', toi: '#5E7030', sang: '#E8A72E' },
+  ran: { chinh: '#8FA64A', toi: '#B5532E', sang: '#F2E2B6' },
+  nguaxanh: { chinh: '#9CAE4E', toi: '#66772E', sang: '#E8B84A' },
+  ngua: { chinh: '#C98A3A', toi: '#8A5A22', sang: '#E8B84A' },
+  sonduong: { chinh: '#C9502E', toi: '#8A3219', sang: '#E8B45A' },
+  de: { chinh: '#F2E2C0', toi: '#C9A77A', sang: '#D9A15A' },
+  khi: { chinh: '#D9A441', toi: '#9C6E22', sang: '#F4DDB0' },
+  khido: { chinh: '#B8502C', toi: '#7E3217', sang: '#F4DDB0' },
+  vittroi: { chinh: '#8FA64A', toi: '#5E7030', sang: '#C9D98E' },
+  cho: { chinh: '#C98A3A', toi: '#8A4A22', sang: '#F2E0BC' },
 };
 
 /** Lông của con vật đã ra ngồi ngoài: bạc đi như tranh phơi nắng lâu ngày. */

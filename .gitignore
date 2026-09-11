@@ -6,6 +6,7 @@ dist/
 .DS_Store
 .vite/
 coverage/
+__pycache__/
 
 # Nhạc gốc 340 MB tải về từ YouTube — chỉ giữ bản đã cắt/nén trong
 # apps/web/public/assets/ để deploy.

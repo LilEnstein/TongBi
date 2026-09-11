@@ -221,7 +221,7 @@ function MatConVat({ avatar }: { avatar: string }) {
       alt=""
       width={40}
       height={40}
-      /* Không lazy: cả 10 mặt hiện cùng lúc ở màn chọn và tổng chỉ ~120KB,
+      /* Không lazy: cả 20 mặt hiện cùng lúc ở màn chọn và tổng chỉ ~250KB,
          hoãn tải chỉ tạo ra khung rỗng nháy lên rồi mới có ảnh. */
       decoding="async"
       onError={() => setHong(true)}

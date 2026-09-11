@@ -57,13 +57,16 @@ export const TEAM_NAMES = ['Đội Chàm', 'Đội Điều', 'Đội Lá', 'Đ�
 export const TEAM_MARKS = ['khăn mỏ quạ', 'dây chun đỏ', 'tàu lá chuối', 'nón lá'] as const;
 
 /**
- * Mười con vật trong tranh dân gian, thay bộ emoji cũ. Giá trị là id — ảnh nằm
- * ở `apps/web/public/mat/mat_<id>.webp`, sinh theo docs/tong_bi_asset_list.md §1.
- * Hồ sơ cũ còn lưu emoji trong localStorage vẫn hiển thị được (xem `Non`).
+ * Hai mươi con vật trong tranh dân gian, thay bộ emoji cũ. Giá trị là id — ảnh
+ * nằm ở `apps/web/public/mat/mat_<id>.webp`, sinh bằng tools/cat_mat.py theo
+ * docs/tong_bi_asset_list.md §1. Id chỉ gồm chữ thường không dấu (`Non` dựa vào
+ * đó để phân biệt id với emoji cũ). Hồ sơ cũ còn lưu emoji vẫn hiển thị được.
  */
 export const AVATARS = [
   'trau', 'ga', 'lon', 'meo', 'chuot',
   'coc', 'ca', 'vit', 'chim', 'ho',
+  'rong', 'ran', 'nguaxanh', 'ngua', 'sonduong',
+  'de', 'khi', 'khido', 'vittroi', 'cho',
 ] as const;
 
 export const AVATAR_MAC_DINH = 'trau';
@@ -72,6 +75,8 @@ export const AVATAR_MAC_DINH = 'trau';
 export const AVATAR_TEN: Record<string, string> = {
   trau: 'trâu', ga: 'gà trống', lon: 'lợn', meo: 'mèo', chuot: 'chuột',
   coc: 'cóc', ca: 'cá chép', vit: 'vịt', chim: 'chim', ho: 'hổ',
+  rong: 'rồng', ran: 'rắn', nguaxanh: 'ngựa xanh', ngua: 'ngựa hồng', sonduong: 'sơn dương',
+  de: 'dê', khi: 'khỉ vàng', khido: 'khỉ đỏ', vittroi: 'vịt trời', cho: 'chó',
 };
 
 /** Giới hạn để server chặn giá trị settings vô lý từ client. */
